@@ -1,2 +1,50 @@
-# FabriconArchitecutre
-Fabricon is an architectural framework that includes design patterns on how to manage projects on Microsoft Fabric.
+# What is Fabricon?
+
+Fabricon is an architectural framework on how to manage software projects on Microsoft Fabric using data engineering and software engineering best practices.
+
+## What does it offer?
+
+Fabricon aims to provide guidance on how to manage software projects of varying complexities. It offers guidance on:
+
+1. Seperation of environments
+2. Medallion architecture
+3. Organization of code using notebooks
+4. Source control
+5. Unit testing
+6. Automated documenation
+7. Branching strategy
+8. Promotion of code from development to production
+
+## The back story?
+
+The engineering team at Unite Digital LLC <https://unitedigital.com> was tasked with building a new product that required processing of large volumes of data. The engineering team, with no prior experience in data engineering / big data, did not find comprehensive guidance on how to build reliable products on big data platforms. The team spent countless hours gathering information from blogs, documentation sites and video series from the internet. We would like to share our findings with the community to enable faster and easier adaoption of Microsoft Fabric.
+
+## Fabricon Architecture
+
+- [The Basics](./Basics/README.md)
+- [Fabricon 1: Basic Environment Segregation](./Fabricon1/README.md)
+- [Fabricon 2: Medallion-Based Environment Architecture](./Fabricon2/README.md)
+- [Fabricon 3: Medallion-Based Environment Architecture for Large Data Volumes](./Fabricon3/README.md)
+
+## Authors
+
+- Author: [Shahid Syed](https://www.linkedin.com/in/smsyed)
+- Co-author: George Matus
+
+## Contributing
+
+This project welcomes contributions and suggestions. Contributors are responsible to ensure that they have the right to, and actually do, grant us the rights to use your contribution.
+
+You may suggest improvements/corrections to existing patterns or suggest addition of new ones.
+
+## Inspirations
+
+- [Guy in a cube](https://www.youtube.com/@GuyInACube)
+- [endjin](https://www.youtube.com/@endjin)
+- [nbdev](https://nbdev.fast.ai)
+- [jupyter-black](https://pypi.org/project/jupyter-black)
+- [Microsoft Learn](https://learn.microsoft.com/en-us/fabric/get-started/microsoft-fabric-overview)
+
+## License
+
+[MIT plus some](./LICENSE)
