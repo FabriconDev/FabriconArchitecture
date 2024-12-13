@@ -6,18 +6,26 @@ Fabricon is an architectural framework on how to manage software projects on Mic
 
 Fabricon aims to provide guidance on how to manage software projects of varying complexities. It offers guidance on:
 
-1. Seperation of environments
+1. Environment separation
 2. Medallion architecture
-3. Organization of code using notebooks
+3. Code organization using notebooks
 4. Source control
 5. Unit testing
-6. Automated documenation
+6. Automated documentation
 7. Branching strategy
-8. Promotion of code from development to production
+8. Deployment to production
+
+## Who is it for?
+
+Fabricon aims to introduce data engineering teams to software engineering best practices, and to introduce software engineering teams to data engineering best practices under one umbrella.
+
+## What is the goal?
+
+Our goal is to win community contributions and adoption to an extent that when someone say "we use Fabricon 1", people know exactly it means.
 
 ## The back story?
 
-The engineering team at Unite Digital LLC <https://unitedigital.com> was tasked with building a new product that required processing of large volumes of data. The engineering team, with no prior experience in data engineering / big data, did not find comprehensive guidance on how to build reliable products on big data platforms. The team spent countless hours gathering information from blogs, documentation sites and video series from the internet. We would like to share our findings with the community to enable faster and easier adaoption of Microsoft Fabric.
+The engineering team at Unite Digital LLC <https://unitedigital.com> was tasked with building a new product that required processing of large volumes of data. The engineering team, with no prior experience in data engineering / big data, did not find comprehensive guidance on how to build reliable products on big data platforms. The team spent countless hours gathering information from blogs, documentation sites and video series from the internet. We would like to share our findings with the community to enable faster and easier adoption of Microsoft Fabric.
 
 ## Fabricon Architecture
 
@@ -33,9 +41,10 @@ The engineering team at Unite Digital LLC <https://unitedigital.com> was tasked 
 
 ## Contributing
 
-This project welcomes contributions and suggestions. Contributors are responsible to ensure that they have the right to, and actually do, grant us the rights to use your contribution.
+Microsoft Fabric is growing at a rapid pace and we need your assistance to ensure that Fabricon remains up-to-date.
+We welcome your contributions and suggestions. Contributors are responsible to ensure that they have the right to, and actually do, grant us the rights to use your contribution.
 
-You may suggest improvements/corrections to existing patterns or suggest addition of new ones.
+See something we missed? Please contribute to existing patterns or suggest a new one.
 
 ## Inspirations
 
