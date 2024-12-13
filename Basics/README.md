@@ -9,7 +9,7 @@ Microsoft Fabric is fairly new platform and we are seeing new features being add
 If you are new to Microsoft Fabric then it is important to understand the platform and what is offers. You can start with any of the following resources:
 
 1. [What is Microsoft Fabric? - Microsoft Learn - Documentation](https://learn.microsoft.com/en-us/fabric/get-started/microsoft-fabric-overview)
-2. [Getting started with Micsoroft Fabric - Guy in a Cube - YouTube](https://www.youtube.com/playlist?list=PLv2BtOtLblH1RhbtfTpp9ovi3Y-3HiRO2)
+2. [Getting started with Microsoft Fabric - Guy in a Cube - YouTube](https://www.youtube.com/playlist?list=PLv2BtOtLblH1RhbtfTpp9ovi3Y-3HiRO2)
 3. [Microsoft Fabric Data Engineering End to End Demo - endjin - YouTube](https://www.youtube.com/playlist?list=PLJt9xcgQpM61fxyB1aWzWCAEsHZHEZD6w)
 
 ## 2. Environment Separation
@@ -64,17 +64,51 @@ As a result, we opted to use lakehouse for the flexibility if offers over the wa
 
 ### 3.2 Lakehouse Schema
 
-Introduction of [lakehouse schema](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-schemas) helped us simplify our Medallion implementation.
+Introduction of [lakehouse schema](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-schemas) helped simplify the Medallion architecture implementation.
 
-## 5. Source Control
+Let's assume bronze layer lakehouse has following tables:
+
+1. `dbo.Customer`
+2. `dbo.Product`
+3. `dbo.Order`
+
+Let's assume that on silver layer you need to create a flat table that contains elements from all 3 tables above. On silver lakehouse, Fabric shortcuts can used to provide access to bronze tables:
+
+1. `Bronze.Customer`
+2. `Bronze.Product`
+3. `Bronze.Order`
+
+The above tables can be easily used in a Spark notebook to read data from bronze layer and write to `dbo.CustomerOrder` table on silver layer.
+
+`dbo` schema represents current Medallion layer (silver) and `Bronze` schema represents bronze Medallion layer.
+
+Similarly, on gold Medallion layer the lakehouse can have following schema:
+
+1. `dbo` to represent gold layer
+2. `Silver` to represent silver layer
+
+This approach enables access to multiple Medallion layers within the constraint of having only one lakehouse available in session context, with clear distinction of layer via schema.
+
+## 4. Source Control
+
+For the CRM example, Fabricon suggest following branching strategy:
+
+- `main` branch linked with `CRM-Prod` workspace
+- `develop` branch linked with `CRM-Dev` workspace
+- `Branch out to new workspace` feature is used to create a new workspace from `CRM-Dev`. This new workspace will be linked to `feature` branch.
+- Use `pull request` to merge `feature` branch in `develop` branch. This will promote code to `CRM-Dev` workspace.
+- Use `pull request` to merge `develop` branch in `main` branch. This will promote code to `CRM-Prod` workspace.
+
+![Fabric - Branch out to new workspace](../Images/git-branch-to-new-workspace.png)
+
+
+## 5. Code Organization Using Notebooks
 
 
 
-
-3. Code organization using notebooks
 4. Source control
 5. Unit testing
-6. Automated documenation
+6. Automated documentation
 7. Branching strategy
 8. Deployment to production
 9. Auditing
