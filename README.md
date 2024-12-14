@@ -29,15 +29,22 @@ The engineering team at Unite Digital LLC <https://unitedigital.com> was tasked 
 
 ## Fabricon Architecture
 
+> Any Fabricon pattern ending in an alphabet instead a number indicates that it is an extension that can be applied to any numbered Fabricon pattern.
+
 - [The Basics](./Basics/README.md)
 - [Fabricon 1: Basic Environment Segregation](./Fabricon1/README.md)
 - [Fabricon 2: Medallion-Based Environment Architecture](./Fabricon2/README.md)
 - [Fabricon 3: Medallion-Based Environment Architecture for Large Data Volumes](./Fabricon3/README.md)
+- [Fabricon N: Code Organization Using Notebooks](./FabriconN/README.md)
 
 ## Authors
 
 - Author: [Shahid Syed](https://www.linkedin.com/in/smsyed)
-- Co-author: George Matus
+- Co-author: [George Matus](https://github.com/GMat3)
+
+Contributors:
+
+- [YOUR NAME HERE]
 
 ## Contributing
 
