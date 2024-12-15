@@ -1,4 +1,4 @@
-MIT License
+# MIT License
 
 Copyright (c) 2024 Fabricon Dev
 
@@ -11,6 +11,11 @@ furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
+
+Any redistribution or use in other projects must include an acknowledgment to
+Fabricon Dev (<https://fabricon.dev>) as the original creation.
+Fabricon Dev is open source initiative sponsored by
+Unite Digital LLC (<https://unitedigital.com>).
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
