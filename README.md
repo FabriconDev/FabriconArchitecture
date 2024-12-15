@@ -1,6 +1,6 @@
 # What is Fabricon?
 
-Fabricon is an architectural framework on how to manage software projects on Microsoft Fabric using data engineering and software engineering best practices.
+Fabricon is an architectural framework on how to manage software projects on [Microsoft Fabric](https://learn.microsoft.com/en-us/fabric/get-started/microsoft-fabric-overview) using data engineering and software engineering best practices.
 
 ## What does it offer?
 
@@ -25,17 +25,17 @@ Our goal is to win community contributions and adoption to an extent that when s
 
 ## The back story?
 
-The engineering team at Unite Digital LLC <https://unitedigital.com> was tasked with building a new product that required processing of large volumes of data. The engineering team, with no prior experience in data engineering / big data, did not find comprehensive guidance on how to build reliable products on big data platforms. The team spent countless hours gathering information from blogs, documentation sites and video series from the internet. We would like to share our findings with the community to enable faster and easier adoption of Microsoft Fabric.
+The engineering team at [Unite Digital LLC](https://unitedigital.com) was tasked with building a new product that required processing of large volumes of data. The engineering team, with no prior experience in data engineering / big data, did not find comprehensive guidance on how to build reliable products on big data platforms. The team spent countless hours gathering information from blogs, documentation sites and video series from the internet. We would like to share our findings with the community to enable faster and easier adoption of [Microsoft Fabric](https://learn.microsoft.com/en-us/fabric/get-started/microsoft-fabric-overview).
 
 ## Fabricon Architecture
-
-> Any Fabricon pattern ending in an alphabet instead a number indicates that it is an extension that can be applied to any numbered Fabricon pattern.
 
 - [The Basics](./Basics/README.md)
 - [Fabricon 1: Basic Environment Segregation](./Fabricon1/README.md)
 - [Fabricon 2: Medallion-Based Environment Architecture](./Fabricon2/README.md)
 - [Fabricon 3: Medallion-Based Environment Architecture for Large Data Volumes](./Fabricon3/README.md)
 - [Fabricon N: Code Organization Using Notebooks](./FabriconN/README.md)
+
+> Any Fabricon pattern ending in an alphabet instead a number indicates that it is an extension that can be applied to any numbered Fabricon pattern.
 
 ## Authors
 
@@ -64,3 +64,7 @@ See something we missed? Please contribute to existing patterns or suggest a new
 ## License
 
 [MIT plus some](./LICENSE)
+
+## Sponsors
+
+[![Unite Digital logo](./Images/unite_digital_logo.png)](https://unitedigital.com)

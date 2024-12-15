@@ -12,12 +12,7 @@ If you are new to Microsoft Fabric then it is important to understand the platfo
 2. [Getting started with Microsoft Fabric - Guy in a Cube - YouTube](https://www.youtube.com/playlist?list=PLv2BtOtLblH1RhbtfTpp9ovi3Y-3HiRO2)
 3. [Microsoft Fabric Data Engineering End to End Demo - endjin - YouTube](https://www.youtube.com/playlist?list=PLJt9xcgQpM61fxyB1aWzWCAEsHZHEZD6w)
 
-## 2. Code Organization Using Notebooks
 
-
-
-4. Source control
-5. Unit testing
 6. Automated documentation
 7. Branching strategy
 8. Deployment to production
