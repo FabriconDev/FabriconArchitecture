@@ -1,10 +1,8 @@
 # Fabricon: The Basics
 
-The document covers the concepts shared between various Fabricon patterns.
+Microsoft Fabric is fairly new platform and we are seeing new features being added every few weeks. As with any new platform, there are feature gaps that engineers will need to work around to make their solutions work.
 
-## 1. Getting started with Microsoft Fabric
-
-Microsoft Fabric is fairly new platform and we are seeing new features being added every few weeks. This also means that there are a lot of gaps that engineers will need to work around to make their solutions work.
+## Getting started with Microsoft Fabric
 
 If you are new to Microsoft Fabric then it is important to understand the platform and what is offers. You can start with any of the following resources:
 
@@ -12,8 +10,4 @@ If you are new to Microsoft Fabric then it is important to understand the platfo
 2. [Getting started with Microsoft Fabric - Guy in a Cube - YouTube](https://www.youtube.com/playlist?list=PLv2BtOtLblH1RhbtfTpp9ovi3Y-3HiRO2)
 3. [Microsoft Fabric Data Engineering End to End Demo - endjin - YouTube](https://www.youtube.com/playlist?list=PLJt9xcgQpM61fxyB1aWzWCAEsHZHEZD6w)
 
-
-6. Automated documentation
-7. Branching strategy
-8. Deployment to production
-9. Auditing
+<!-- Auditing -->
