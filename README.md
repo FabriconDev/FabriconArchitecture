@@ -1,4 +1,6 @@
-# What is Fabricon?
+# Fabricon.Dev: Official Home of Fabricon Architecture
+
+## What is Fabricon?
 
 Fabricon is an architectural framework on how to manage software projects on [Microsoft Fabric](https://learn.microsoft.com/en-us/fabric/get-started/microsoft-fabric-overview) using data engineering and software engineering best practices.
 
@@ -37,7 +39,7 @@ The engineering team at [Unite Digital LLC](https://unitedigital.com) was tasked
 - Fabricon 5: Realtime Reporting with EventHouse
 - [Fabricon N: Code Organization Using Notebooks](./FabriconN/README.md)
 
-> Any Fabricon pattern ending in an alphabet instead a number indicates that it is an extension that can be applied to any numbered Fabricon pattern.
+> Any Fabricon pattern ending in an alphabet instead a number indicates that it is an extension that can be applied to most numbered Fabricon patterns.
 
 ## Authors
 
