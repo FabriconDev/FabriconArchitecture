@@ -48,14 +48,14 @@ The engineering team at [Unite Digital LLC](https://unitedigital.com) was tasked
 
 Contributors:
 
-- [YOUR NAME HERE]
+- [Michael Cavanaugh](https://github.com/funkel1989)
 
 ## Contributing
 
 Microsoft Fabric is growing at a rapid pace and we need your assistance to ensure that Fabricon remains up-to-date.
 We welcome your contributions and suggestions. Contributors are responsible to ensure that they have the right to, and actually do, grant us the rights to use your contribution.
 
-See something we missed? Please contribute to existing patterns or suggest a new one.
+Please see our process on contributing to the Fabricon Architecture [HERE](CONTRIBUTING.md)
 
 ## Inspirations
 
