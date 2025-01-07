@@ -1,8 +1,8 @@
-# Fabricon.Dev: Official Home of Fabricon Architecture
+# #FabriconDev: Official Home of Fabricon Architecture
 
 ## What is Fabricon?
 
-Fabricon is an architectural framework on how to manage software projects on [Microsoft Fabric](https://learn.microsoft.com/en-us/fabric/get-started/microsoft-fabric-overview) using data engineering and software engineering best practices.
+Fabricon is an architectural framework on how to manage software projects on [Microsoft Fabric](https://learn.microsoft.com/en-us/fabric/get-started/microsoft-fabric-overview) using data engineering and software engineering best practices. It is written by engineering team at [Unite Digital LLC](https://unitedigital.com).
 
 ## What does it offer?
 
@@ -41,10 +41,17 @@ The engineering team at [Unite Digital LLC](https://unitedigital.com) was tasked
 
 > Any Fabricon pattern ending in an alphabet instead a number indicates that it is an extension that can be applied to most numbered Fabricon patterns.
 
-## Authors
+## Recognition
 
-- Author: [Shahid Syed](https://www.linkedin.com/in/smsyed)
-- Co-author: [George Matus](https://github.com/GMat3)
+- Author: Shahid Syed [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/smsyed)
+- Co-author: George Matus
+- Advisor: Fadi Aoude [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/fadiaoude)
+
+Core Contributors:
+
+- Michael Cavanaugh [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/michael-cavanaugh-3920337a)
+- Bill McGough [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/williamamcgough)
+- [YOUR NAME HERE]
 
 Contributors:
 
