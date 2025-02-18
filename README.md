@@ -35,7 +35,7 @@ The engineering team at [Unite Digital LLC](https://unitedigital.com) was tasked
 - [Fabricon 1: Basic Environment Segregation](./Fabricon1/README.md)
 - [Fabricon 2: Medallion-Based Environment Architecture](./Fabricon2/README.md)
 - [Fabricon 3: Medallion-Based Environment Architecture for Large Data Volumes](./Fabricon3/README.md)
-- Fabricon 4: Seamless Reporting with Database Mirroring
+- [Fabricon 4: Seamless Reporting with Database Mirroring](./Fabricon4/README.md)
 - Fabricon 5: Realtime Reporting with EventHouse
 - [Fabricon N: Code Organization Using Notebooks](./FabriconN/README.md)
 
@@ -45,7 +45,6 @@ The engineering team at [Unite Digital LLC](https://unitedigital.com) was tasked
 
 - Author: Shahid Syed [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/smsyed)
 - Co-author: George Matus
-- Advisor: Fadi Aoude [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/fadiaoude)
 
 Core Contributors:
 
@@ -55,14 +54,14 @@ Core Contributors:
 
 Contributors:
 
-- [Michael Cavanaugh](https://github.com/funkel1989)
+- [YOUR NAME HERE]
 
 ## Contributing
 
 Microsoft Fabric is growing at a rapid pace and we need your assistance to ensure that Fabricon remains up-to-date.
 We welcome your contributions and suggestions. Contributors are responsible to ensure that they have the right to, and actually do, grant us the rights to use your contribution.
 
-Please see our process on contributing to the Fabricon Architecture [HERE](CONTRIBUTING.md)
+Please see [our process on contributing to the Fabricon Architecture](./CONTRIBUTING.md).
 
 ## Inspirations
 
@@ -74,7 +73,7 @@ Please see our process on contributing to the Fabricon Architecture [HERE](CONTR
 
 ## License
 
-[MIT plus some](./LICENSE)
+[MIT plus some](https://github.com/FabriconDev/FabriconArchitecutre/blob/main/LICENSE)
 
 ## Sponsors
 
