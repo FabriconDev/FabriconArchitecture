@@ -39,7 +39,7 @@ The engineering team at [Unite Digital LLC](https://unitedigital.com) was tasked
 - Fabricon 5: Realtime Reporting with EventHouse
 - [Fabricon N: Code Organization Using Notebooks](./FabriconN/README.md)
 
-> Any Fabricon pattern ending in an alphabet instead a number indicates that it is an extension that can be applied to most numbered Fabricon patterns.
+> Any Fabricon pattern ending in a letter instead a number indicates that it is an extension that can be applied to any numbered Fabricon pattern.
 
 ## Authors
 
