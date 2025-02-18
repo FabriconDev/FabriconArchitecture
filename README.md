@@ -45,6 +45,7 @@ The engineering team at [Unite Digital LLC](https://unitedigital.com) was tasked
 
 - Author: Shahid Syed [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/smsyed)
 - Co-author: George Matus
+- Advisor: Fadi Aoude [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/fadiaoude)
 
 Core Contributors:
 
