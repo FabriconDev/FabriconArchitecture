@@ -1,8 +1,8 @@
-# Fabricon.Dev: Official Home of Fabricon Architecture
+# #FabriconDev: Official Home of Fabricon Architecture
 
 ## What is Fabricon?
 
-Fabricon is an architectural framework on how to manage software projects on [Microsoft Fabric](https://learn.microsoft.com/en-us/fabric/get-started/microsoft-fabric-overview) using data engineering and software engineering best practices.
+Fabricon is an architectural framework on how to manage software projects on [Microsoft Fabric](https://learn.microsoft.com/en-us/fabric/get-started/microsoft-fabric-overview) using data engineering and software engineering best practices. It is written by engineering team at [Unite Digital LLC](https://unitedigital.com).
 
 ## What does it offer?
 
@@ -35,27 +35,34 @@ The engineering team at [Unite Digital LLC](https://unitedigital.com) was tasked
 - [Fabricon 1: Basic Environment Segregation](./Fabricon1/README.md)
 - [Fabricon 2: Medallion-Based Environment Architecture](./Fabricon2/README.md)
 - [Fabricon 3: Medallion-Based Environment Architecture for Large Data Volumes](./Fabricon3/README.md)
-- Fabricon 4: Seamless Reporting with Database Mirroring
+- [Fabricon 4: Seamless Reporting with Database Mirroring](./Fabricon4/README.md)
 - Fabricon 5: Realtime Reporting with EventHouse
 - [Fabricon N: Code Organization Using Notebooks](./FabriconN/README.md)
 
 > Any Fabricon pattern ending in a letter instead a number indicates that it is an extension that can be applied to any numbered Fabricon pattern.
 
-## Authors
+## Recognition
 
-- Author: [Shahid Syed](https://www.linkedin.com/in/smsyed)
-- Co-author: [George Matus](https://github.com/GMat3)
+- Author: Shahid Syed [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/smsyed)
+- Co-author: George Matus
+- Advisor: Fadi Aoude [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/fadiaoude)
+
+Core Contributors:
+
+- Michael Cavanaugh [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/michael-cavanaugh-3920337a)
+- Bill McGough [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/williamamcgough)
+- [YOUR NAME HERE]
 
 Contributors:
 
-- [Michael Cavanaugh](https://github.com/funkel1989)
+- [YOUR NAME HERE]
 
 ## Contributing
 
 Microsoft Fabric is growing at a rapid pace and we need your assistance to ensure that Fabricon remains up-to-date.
 We welcome your contributions and suggestions. Contributors are responsible to ensure that they have the right to, and actually do, grant us the rights to use your contribution.
 
-Please see our process on contributing to the Fabricon Architecture [HERE](CONTRIBUTING.md)
+Please see [our process on contributing to the Fabricon Architecture](./CONTRIBUTING.md).
 
 ## Inspirations
 
@@ -67,7 +74,7 @@ Please see our process on contributing to the Fabricon Architecture [HERE](CONTR
 
 ## License
 
-[MIT plus some](./LICENSE)
+[MIT plus some](https://github.com/FabriconDev/FabriconArchitecutre/blob/main/LICENSE)
 
 ## Sponsors
 
