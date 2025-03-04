@@ -9,12 +9,15 @@
   <title>Fabricon Dev: Official Home of Fabricon Architecture</title>
 </head>
 <body>
-  <div id="app"></div>
+  <div id="app">Please wait...</div>
   <script>
     window.$docsify = {
       el: "#app",
       repo: 'https://github.com/FabriconDev/FabriconArchitecutre/blob/main/README.md',
-      loadSidebar: true,
+      loadSidebar: '_sidebar.md',
+      alias: {
+        '/.*/_sidebar.md': '/_sidebar.md', // See #301
+      }
     }
   </script>
   <script src="//cdn.jsdelivr.net/npm/docsify/lib/docsify.min.js"></script>
