@@ -205,3 +205,8 @@ os.environ["DATA_ENVIRONMENT"] = dataEnvironment
 ```
 
 > [Fabricon 3](../Fabricon3/README.md) explains the reason for having code and data in separate workspaces.
+
+The current workspace will have uncommitted changes that one may or may not want to push back to Git.
+
+* Pushing the changes back to Git has the risk of conflicts next time a PR is completed into the branch associated with the current workspace.
+* Otherwise there will be uncommitted changes left on your workspace which isn't optimal either.
