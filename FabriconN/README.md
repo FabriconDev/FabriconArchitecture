@@ -135,4 +135,73 @@ notebookutils.notebook.updateDefinition(
 
 > Remember, the notebook running `updateDefinition` function cannot update itself.
 
+Fabricon recommends having a notebook for environment variables and another notebook to run post deployment updates to point the notebooks containing code to correct lakehouse.
 
+Following code shows contents of `PostDeployment` notebook:
+
+```python
+# Environment variables are defined in Common.
+%run Common
+```
+
+```python
+from notebookutils import notebook
+from concurrent.futures import ThreadPoolExecutor
+import os
+import json
+
+if os.getenv("DATA_WORKSPACE_ID") == None:
+    notebookutils.notebook.exit("`DATA_WORKSPACE_ID` is not defined")
+
+# Function to update notebook definition
+def update_notebook(notebook_item):
+    notebook_name = notebook_item['displayName']
+    notebook_lakehouse_name = json.loads(notebookutils.notebook.getDefinition(nb["displayName"]))["metadata"]["dependencies"]["lakehouse"]["default_lakehouse_name"]
+    
+    # Skip if the notebook name is "DevOps"
+    if notebook_name == "DevOps":
+        print(f"Skipping notebook '{notebook_name}'")
+        return
+    
+    notebook.updateDefinition(
+        name=notebook_name,
+        defaultLakehouse=notebook_lakehouse_name,
+        defaultLakehouseWorkspace=os.getenv("DATA_WORKSPACE_ID")
+    )
+    print(f"Updated notebook definition for '{notebook_name}'")
+
+# Get the list of notebooks
+notebook_list = notebookutils.notebook.list()
+
+# Run updates in parallel
+with ThreadPoolExecutor() as executor:
+    executor.map(update_notebook, notebook_list)
+```
+
+Following code shows contents of `Common` notebook:
+
+```python
+import sempy.fabric as fabric
+
+currentWorkspaceId = fabric.get_notebook_workspace_id()
+
+# Code workspaces
+CRM_DEV_WORKSPACE_ID = "00000000-0000-0000-0000-000000000001"
+CRM_PROD_WORKSPACE_ID = "00000000-0000-0000-0000-000000000002"
+
+# Data workspaces
+CRM_DATA_DEV_WORKSPACE_ID = "00000000-0000-0000-0000-000000000003"
+CRM_DATA_PROD_WORKSPACE_ID = "00000000-0000-0000-0000-000000000004"
+
+if currentWorkspaceId == CRM_PROD_WORKSPACE_ID:
+    dataWorkspaceId = CRM_DATA_PROD_WORKSPACE_ID
+    dataEnvironment = "PROD"
+else: #Fallback to DEV environment. This enable DEV and any feature workspace to work without code changes. 
+    dataWorkspaceId = CRM_DATA_DEV_WORKSPACE_ID
+    dataEnvironment = "DEV"
+
+os.environ["DATA_WORKSPACE_ID"] = dataWorkspaceId
+os.environ["DATA_ENVIRONMENT"] = dataEnvironment
+```
+
+> [Fabricon 3](../Fabricon3/README.md) explains the reason for having code and data in separate workspaces.
