@@ -2,11 +2,11 @@
 
 ## What is Fabricon?
 
-Fabricon is an architectural framework on how to manage software projects on [Microsoft Fabric](https://learn.microsoft.com/en-us/fabric/get-started/microsoft-fabric-overview) using data engineering and software engineering best practices. It is written by engineering team at [Unite Digital LLC](https://unitedigital.com).
+Fabricon is an architectural framework for managing software projects on [Microsoft Fabric](https://learn.microsoft.com/en-us/fabric/get-started/microsoft-fabric-overview) using data engineering and software engineering best practices. It is written by engineering team at [Unite Digital LLC](https://unitedigital.com).
 
 ## What does it offer?
 
-Fabricon aims to provide guidance on how to manage software projects of varying complexities. It offers guidance on:
+Fabricon provides guidance on how to manage software projects of varying complexities. It offers guidance on:
 
 1. Environment separation
 2. Medallion architecture
@@ -19,11 +19,11 @@ Fabricon aims to provide guidance on how to manage software projects of varying 
 
 ## Who is it for?
 
-Fabricon aims to introduce data engineering teams to software engineering best practices, and to introduce software engineering teams to data engineering best practices under one umbrella.
+Fabricon is designed for data engineering teams to learn software engineering best practices, and for software engineering teams to learn data engineering best practices, all under one framework.
 
 ## What is the goal?
 
-Our goal is to win community contributions and adoption to an extent that when someone say "we use Fabricon 1", people know exactly it means.
+Our goal is to win community contributions and adoption to an extent that when someone say "we use Fabricon 1", people know exactly what it means.
 
 ## The back story?
 
@@ -39,7 +39,7 @@ The engineering team at [Unite Digital LLC](https://unitedigital.com) was tasked
 - Fabricon 5: Realtime Reporting with EventHouse (Coming soon)
 - [Fabricon N: Code Organization Using Notebooks](./FabriconN/README.md)
 
-> Any Fabricon pattern ending in a letter instead a number indicates that it is an extension that can be applied to any numbered Fabricon pattern.
+> Any Fabricon pattern ending in a letter instead of a number indicates that it is an extension that can be applied to any numbered Fabricon pattern.
 
 ## Recognition
 
@@ -59,11 +59,17 @@ Contributors:
 
 ## Contributing
 
-Microsoft Fabric is growing at a rapid pace and we need your assistance to ensure that Fabricon remains up-to-date.
-We welcome your contributions and suggestions. Contributors are responsible to ensure that they have the right to, and actually do, grant us the rights to use your contribution.
+Microsoft Fabric is growing rapidly, and we need your assistance to ensure that Fabricon remains up-to-date.
+We welcome your contributions and suggestions. Contributors must ensure they have the right to, and actually grant us the rights to use their contributions.
+
 
 Please see [our process on contributing to the Fabricon Architecture](./CONTRIBUTING.md).
 
+## Social
+
+Reddit: https://www.reddit.com/r/FabriconDev  
+> Have questions, comments, or suggestions? Join our community on Reddit and reach out to us directly!
+  
 ## Inspirations
 
 - [Guy in a cube](https://www.youtube.com/@GuyInACube)
