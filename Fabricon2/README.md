@@ -127,3 +127,24 @@ Data Workspace (CRM-Data-Dev / CRM-Data-Prod)
 Production pipelines should notify stakeholders of execution outcomes. A common pattern is to generate an HTML email with per-step results including step name, start/end times, duration, success/failure status, and notes.
 
 Teams can use the [Office 365 Connector](https://learn.microsoft.com/en-us/connectors/office365/) or similar service to send these notifications. For a structured approach to capturing per-step results, see [Fabricon N - Pipeline Result Tracking](../FabriconN/README.md#1-pipeline-result-tracking).
+
+## What Fabricon 2 Solves
+
+| Problem | Solution |
+| --- | --- |
+| Microsoft recommends 9 workspaces for 2 environments — overkill for most projects | 2 workspaces with multiple lakehouses per workspace |
+| Lakehouse vs warehouse decision | Lakehouse recommended for flexibility, comparable performance, no upfront schema |
+| Notebooks can only connect to one lakehouse at a time | Shortcuts + named schemas (`Bronze.*`, `Silver.*`) for cross-layer access |
+| No structured data organization across medallion layers | `dbo` schema for current layer, named schemas for other layers |
+| No branching strategy for Fabric | `main` ↔ Prod, `develop` ↔ Dev, feature branches via "Branch out to new workspace" |
+| No visibility into pipeline execution outcomes | HTML email notifications with per-step results |
+
+## References
+
+- [Medallion Architecture](https://www.databricks.com/glossary/medallion-architecture)
+- [OneLake Medallion Lakehouse Architecture](https://learn.microsoft.com/en-us/fabric/onelake/onelake-medallion-lakehouse-architecture)
+- [Decision Guide: Choose Between Warehouse and Lakehouse](https://learn.microsoft.com/en-us/fabric/get-started/decision-guide-lakehouse-warehouse)
+- [Lakehouse Schemas](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-schemas)
+- [Lakehouse Shortcuts](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-shortcuts)
+- [Git Integration in Fabric](https://learn.microsoft.com/en-us/fabric/cicd/git-integration/intro-to-git-integration)
+- [Office 365 Connector](https://learn.microsoft.com/en-us/connectors/office365/)

@@ -568,3 +568,28 @@ Gold Lakehouse (e.g., CRM-Gold)
 │   └── Silver.*       — shortcuts to Silver lakehouse dbo.* tables
 └── Files/
 ```
+
+## What Fabricon N Solves
+
+| Problem | Solution |
+| --- | --- |
+| Notebooks run as unstructured scripts with no consistency | Abstract base class enforces `_get_data` / `_write_to_lakehouse` / `run` contract |
+| No visibility into which pipeline steps succeeded or failed | `PipelineResult` and `PipelineResultList` capture per-step execution details |
+| Flat notebook execution with no tier isolation | Tiered orchestration: Main → Bronze → Silver → Gold with independent timeout/retry |
+| Duplicated data access code across notebooks | `LakeHouseDataService` wheel package shared across all steps |
+| Full data reload on every pipeline run | Incremental processing via max-date tracking + Delta MERGE upsert |
+| Custom Spark environments slow session startup to 50-120s | Python wheel packages keep session start at 3-10s |
+| Manual notebook lakehouse rebinding after promotion | DevOps notebook automates rebinding via `notebookutils.notebook.updateDefinition()` |
+| Manual shortcut creation across environments | Tier notebooks auto-provision shortcuts using `table_exists()` check |
+| No automated testing of notebook code | Unit test notebooks run same code as pipeline steps |
+
+## References
+
+- [Fabric Notebook Utilities](https://learn.microsoft.com/en-us/fabric/data-engineering/notebook-utilities)
+- [Semantic Link (sempy)](https://learn.microsoft.com/en-us/python/api/semantic-link-sempy/sempy.fabric)
+- [Delta Lake MERGE](https://docs.delta.io/latest/delta-update.html#upsert-into-a-table-using-merge)
+- [Lakehouse Shortcuts](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-shortcuts)
+- [OneLake Shortcuts REST API](https://learn.microsoft.com/en-us/rest/api/fabric/core/onelake-shortcuts/create-shortcut)
+- [Fabric Variable Libraries](https://learn.microsoft.com/en-us/fabric/cicd/variable-library/variable-library-overview)
+- [nbdev - Notebook Documentation](https://nbdev.fast.ai/)
+- [jupyter-black - Code Formatting](https://github.com/n8henrie/jupyter-black)

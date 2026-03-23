@@ -13,14 +13,25 @@ Each workspace contains all the items required for the data product, which may i
 
 Fabricon recommends following folder structure to organize code. Lakehouse/warehouse can be on the root on the workspace.
 
-```mermaid
-graph LR
-    subgraph CRM-Dev / CRM-Prod
-        A[📁 Archive]
-        B[📁 Exploration]
-        C[📁 Pipelines]
-        D[📁 Reports]
-        E[📁 Tests]
-        F[📓 Readme]
-    end
+```text
+CRM-Dev / CRM-Prod
+├── 📁 Archive
+├── 📁 Exploration
+├── 📁 Pipelines
+├── 📁 Reports
+├── 📁 Tests
+└── 📓 Readme
 ```
+
+## What Fabricon 1 Solves
+
+| Problem | Solution |
+| --- | --- |
+| Non-production and production code mixed together | Separate Fabric workspace per environment |
+| No consistent project structure | Standardized folder structure (Archive, Exploration, Pipelines, Reports, Tests) |
+| Unclear promotion path for code changes | Environment-per-workspace enables clear promotion flow |
+
+## References
+
+- [Microsoft Fabric Workspaces](https://learn.microsoft.com/en-us/fabric/get-started/workspaces)
+- [Fabric Domains](https://learn.microsoft.com/en-us/fabric/governance/domains)

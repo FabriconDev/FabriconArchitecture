@@ -39,3 +39,19 @@ Each workspace has
 Each `CRM-Bronze` lakehouse uses [shortcuts](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-shortcuts) to link to large tables/files from `CRM-Bronze-Shared` in `CRM-Shared` workspace.
 
 This approach enables full environment segregation without having to duplicate large volume of data.
+
+## What Fabricon 3 Solves
+
+| Problem | Solution |
+| --- | --- |
+| Large bronze datasets duplicated across Dev and Prod | Shared workspace (`CRM-Shared`) with shortcuts to shared data |
+| Source control mixed with data items | Separate code workspaces (Git-controlled) from data workspaces |
+| Code changes risk impacting production data | Code and data workspaces are independent — code promotion does not touch data |
+| Feature branches create full copies of large datasets | Feature workspaces link to same data workspace via `DATA_WORKSPACE_ID` |
+
+## References
+
+- [Lakehouse Shortcuts](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-shortcuts)
+- [OneLake Shortcuts](https://learn.microsoft.com/en-us/fabric/onelake/onelake-shortcuts)
+- [Git Integration in Fabric](https://learn.microsoft.com/en-us/fabric/cicd/git-integration/intro-to-git-integration)
+- [Best Practices for Lifecycle Management in Fabric](https://learn.microsoft.com/en-us/fabric/cicd/best-practices-cicd)
