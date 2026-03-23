@@ -424,3 +424,147 @@ The current workspace will have uncommitted changes that one may or may not want
 
 - Pushing the changes back to Git has the risk of conflicts next time a PR is completed into the branch associated with the current workspace.
 - Otherwise there will be uncommitted changes left on your workspace which isn't optimal either.
+
+## 11. Shortcut Provisioning
+
+> Fabricon recommends automating shortcut creation in each tier notebook rather than creating shortcuts manually.
+
+In [Fabricon 2](../Fabricon2/README.md#lakehouse-schema) and [Fabricon 3](../Fabricon3/README.md), cross-lakehouse shortcuts are used to enable multi-layer access within the one-lakehouse-per-session constraint. For example, the Gold lakehouse uses `Bronze.*` and `Silver.*` schemas that are shortcuts to tables in the Bronze and Silver lakehouses.
+
+Manually creating and maintaining these shortcuts across environments is error-prone and does not scale.
+
+### Key Insight
+
+OneLake shortcuts are pointers to storage paths, not references to live table objects. **Shortcuts can be created before the source tables exist.** When notebooks later populate Bronze and Silver tables, shortcuts automatically resolve.
+
+### Where to Place Shortcut Provisioning
+
+Shortcut provisioning belongs in the **tier notebooks** (`02 - Silver.Notebook`, `03 - Gold.Notebook`), not the DevOps notebook. This is because:
+
+1. **Each tier notebook has its default lakehouse connected** — `notebookutils.lakehouse.createShortcut()` creates shortcuts in the default lakehouse, so Silver's notebook creates shortcuts in TaggingSilver, Gold's notebook creates shortcuts in the Gold lakehouse.
+2. **The DevOps notebook has no lakehouse connected** — it cannot use `notebookutils.lakehouse.createShortcut()` since it has no default lakehouse (its job is to rebind other notebooks' lakehouses).
+3. **Shortcuts are idempotent** — safe to run every pipeline execution, not just during deployment.
+
+### Provisioning Sequence
+
+1. Lakehouses pre-exist in the Data workspace (created manually or via deployment pipeline)
+2. Tier notebooks create shortcuts before running pipeline steps (pointing to paths that may be empty on first run)
+3. Pipeline steps populate tables
+4. Shortcuts automatically resolve — tables appear via `Bronze.*` and `Silver.*` schemas
+
+### Implementation
+
+Each tier notebook adds a "Shortcut Provisioning" section after setup and before pipeline steps. Use [`LakeHouseDataService.table_exists()`](../Basics/README.md) to check if a shortcut already exists, [`notebookutils`](https://learn.microsoft.com/en-us/fabric/data-engineering/notebook-utilities) to create shortcuts, and [`sempy.fabric`](https://learn.microsoft.com/en-us/python/api/semantic-link-sempy/sempy.fabric) to resolve source lakehouse IDs by name.
+
+**Silver notebook** — creates Bronze schema shortcuts:
+
+```python
+import os
+import sempy.fabric as fabric
+from unite_digital.lakehouse_data_service import LakeHouseDataService
+
+data_workspace_id = os.getenv("DATA_WORKSPACE_ID")
+if data_workspace_id is None:
+    raise ValueError("`DATA_WORKSPACE_ID` environment variable is not defined")
+
+data_service = LakeHouseDataService(spark, notebookutils, DeltaTable)
+
+lakehouses = fabric.list_items(type="Lakehouse", workspace=data_workspace_id)
+bronze_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRM-Bronze"]["Id"].values[0]
+
+bronze_shortcuts = {
+    "Customer": "/Tables/dbo/Customer",
+    "Product":  "/Tables/dbo/Product",
+    "Order":    "/Tables/dbo/Order",
+}
+
+for name, path in bronze_shortcuts.items():
+    shortcut_name = f"Bronze.{name}"
+    if not data_service.table_exists(shortcut_name):
+        notebookutils.lakehouse.createShortcut(
+            shortcutName=shortcut_name,
+            targetPath=path,
+            sourceLakehouseId=bronze_lakehouse_id,
+            sourceWorkspaceId=data_workspace_id
+        )
+        print(f"Created shortcut {shortcut_name}")
+    else:
+        print(f"Shortcut {shortcut_name} already exists, skipping")
+```
+
+**Gold notebook** — creates both Bronze and Silver schema shortcuts:
+
+```python
+import os
+import sempy.fabric as fabric
+from unite_digital.lakehouse_data_service import LakeHouseDataService
+
+data_workspace_id = os.getenv("DATA_WORKSPACE_ID")
+if data_workspace_id is None:
+    raise ValueError("`DATA_WORKSPACE_ID` environment variable is not defined")
+
+data_service = LakeHouseDataService(spark, notebookutils, DeltaTable)
+
+lakehouses = fabric.list_items(type="Lakehouse", workspace=data_workspace_id)
+bronze_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRM-Bronze"]["Id"].values[0]
+silver_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRM-Silver"]["Id"].values[0]
+
+bronze_shortcuts = {
+    "Customer": "/Tables/dbo/Customer",
+    "Product":  "/Tables/dbo/Product",
+}
+
+silver_shortcuts = {
+    "CustomerOrder": "/Tables/dbo/CustomerOrder",
+}
+
+for name, path in bronze_shortcuts.items():
+    shortcut_name = f"Bronze.{name}"
+    if not data_service.table_exists(shortcut_name):
+        notebookutils.lakehouse.createShortcut(
+            shortcutName=shortcut_name,
+            targetPath=path,
+            sourceLakehouseId=bronze_lakehouse_id,
+            sourceWorkspaceId=data_workspace_id
+        )
+        print(f"Created shortcut {shortcut_name}")
+    else:
+        print(f"Shortcut {shortcut_name} already exists, skipping")
+
+for name, path in silver_shortcuts.items():
+    shortcut_name = f"Silver.{name}"
+    if not data_service.table_exists(shortcut_name):
+        notebookutils.lakehouse.createShortcut(
+            shortcutName=shortcut_name,
+            targetPath=path,
+            sourceLakehouseId=silver_lakehouse_id,
+            sourceWorkspaceId=data_workspace_id
+        )
+        print(f"Created shortcut {shortcut_name}")
+    else:
+        print(f"Shortcut {shortcut_name} already exists, skipping")
+```
+
+### Best Practices
+
+- **Idempotent**: Use `LakeHouseDataService.table_exists()` to check before creating. Safe to re-run every pipeline execution.
+- **Manifest-driven**: Define all shortcuts in a dictionary. Easy to review and update when new tables are added.
+- **Environment-agnostic**: Use `DATA_WORKSPACE_ID` to target the correct workspace. The same code works in Dev and Prod.
+- **Fail fast**: Raise `ValueError` if `DATA_WORKSPACE_ID` is not defined.
+
+### Environment-Specific Shortcut Targets
+
+For shortcuts that need to point to different external sources per environment (e.g., an Amazon S3 folder in development vs. Azure Data Lake Storage in production), use [Fabric Variable Libraries](https://learn.microsoft.com/en-us/fabric/cicd/variable-library/variable-library-overview).
+
+> Variable Libraries are supported in Lakehouse shortcuts, Data Pipelines, and Notebooks. For cross-lakehouse shortcuts within the same workspace, Variable Libraries are not needed.
+
+### Shortcut Structure in Gold Lakehouse
+
+```text
+Gold Lakehouse (e.g., CRM-Gold)
+├── Tables/
+│   ├── dbo.*          — native Gold layer tables
+│   ├── Bronze.*       — shortcuts to Bronze lakehouse dbo.* tables
+│   └── Silver.*       — shortcuts to Silver lakehouse dbo.* tables
+└── Files/
+```

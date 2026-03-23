@@ -1,6 +1,6 @@
 ---
 name: fabricon-architecture
-description: Use when working on Microsoft Fabric projects that follow Fabricon patterns, making workspace or environment decisions, organizing notebooks or pipelines, setting up medallion architecture, planning deployment or source control strategy, writing pipeline step code, or choosing between lakehouse and warehouse. Also use when someone references a Fabricon pattern number (1-4, N).
+description: Use when working on Microsoft Fabric projects that follow Fabricon patterns, making workspace or environment decisions, organizing notebooks or pipelines, setting up medallion architecture, planning deployment or source control strategy, writing pipeline step code, choosing between lakehouse and warehouse, promoting Power BI reports across environments, or managing lakehouse shortcuts. Also use when someone references a Fabricon pattern number (1-4, N, R).
 ---
 
 # Fabricon Architecture
@@ -19,7 +19,9 @@ Created by the engineering team at Unite Digital LLC.
 - Planning deployment or source control strategy
 - Writing or modifying pipeline step code
 - Choosing between lakehouse and warehouse
-- Someone says "Fabricon 1", "Fabricon 2N", etc.
+- Promoting Power BI reports or semantic models across environments
+- Managing lakehouse shortcuts (creation, automation, cross-layer access)
+- Someone says "Fabricon 1", "Fabricon 2N", "Fabricon R", etc.
 
 ## Pattern Progression
 
@@ -31,6 +33,7 @@ Created by the engineering team at Unite Digital LLC.
 | **4** | Seamless Reporting | Near real-time reporting from mirrored databases |
 | **5** | Realtime Reporting with EventHouse | (Coming soon) |
 | **N** | Code Organization Using Notebooks | Extension for any numbered pattern (e.g., "2N") |
+| **R** | Report Promotion Across Environments | Extension for promoting Power BI reports/semantic models across Dev/Prod |
 
 > Numbered patterns build on each other (3 includes 2 includes 1). Letter extensions apply to any number.
 
@@ -48,6 +51,9 @@ Created by the engineering team at Unite Digital LLC.
 | Incremental loads? | Max-date tracking + Delta MERGE upsert |
 | Deployment? | Post-deployment notebook for lakehouse rebinding |
 | Reporting on mirrors? | Intermediary lakehouse with shortcuts (F4) |
+| Report promotion? | Reports in Data workspaces (not Git), promote via Deployment Pipeline (FR) |
+| Embed URLs? | Store `reportId` in app config; resolve per environment |
+| Shortcut provisioning? | DevOps notebook via REST API or notebookutils (one-time, idempotent) |
 | Naming convention? | `Domain-Environment[-Layer]` (e.g., `CRM-Dev`, `CRM-Data-Prod`) |
 
 ## Fabricon 1: Basic Environment Segregation
@@ -93,7 +99,7 @@ This enables multi-layer access within the one-lakehouse-per-session constraint.
 - **Archive** — items pending deletion
 - **Exploration** — research and ad-hoc analysis
 - **Pipelines** — main workflow items
-- **Reports** — Power BI reports
+- **Reports** — Power BI reports (see Fabricon R for guidance on moving reports to Data workspaces)
 - **Tests** — pipeline and data validation tests
 - Readme notebook at workspace root
 
@@ -128,6 +134,69 @@ Strategy for near real-time reporting from mirrored databases (SQL Server, Cosmo
 For transformations on mirrored data:
 - **SQL Views** — simple but slower (falls back to DirectQuery)
 - **Traditional ETL** — when view performance is unacceptable
+
+## Fabricon R: Report Promotion Across Environments
+
+Extension that applies to Fabricon 2, 3, and 4 — any pattern needing Power BI report/semantic model promotion.
+
+### The Problem
+
+Power BI reports and semantic models use logical IDs that are workspace-specific. Git integration causes logicalId conflicts when syncing reports between Dev and Prod workspaces. Fabric Deployment Pipelines assign different `reportId` GUIDs per stage, breaking hardcoded embed URLs. Separating report from semantic model across workspaces compounds the issue.
+
+### Core Principle
+
+**Reports and semantic models are data artifacts, not code artifacts.** They belong in Data workspaces (not Git-controlled) and are promoted via Fabric Deployment Pipelines — separate from notebooks/pipelines which flow through Git.
+
+### Workspace Structure (extends Fabricon 3)
+
+| Workspace | Contents | Source Control | Promotion |
+|-----------|----------|---------------|-----------|
+| `CRM-Dev` | Notebooks, pipelines, DevOps notebook | Git (`develop`) | PR merge → `CRM-Prod` |
+| `CRM-Prod` | Notebooks, pipelines, DevOps notebook | Git (`main`) | — |
+| `CRM-Data-Dev` | Lakehouses, semantic models, reports | None | Deployment Pipeline → |
+| `CRM-Data-Prod` | Lakehouses, semantic models, reports | None | ← Target |
+
+> Reports and semantic models live in Data workspaces, not Code workspaces. This eliminates logicalId conflicts entirely because reports never touch Git.
+
+### Promotion Flow
+
+1. **Code promotion (Git):** `develop` → PR → `main`. Notebooks and pipelines sync to `CRM-Prod`.
+2. **Report/model promotion (Deployment Pipeline):** `CRM-Data-Dev` → `CRM-Data-Prod`. Reports and semantic models copied to Prod.
+3. **Post-deploy rebind (DevOps notebook in CRM-Prod):**
+   - `update_direct_lake_model_lakehouse_connection()` — repoints semantic model to Prod lakehouse
+   - `report_rebind()` — repoints report to Prod semantic model
+   - Notebook lakehouse connections updated in parallel
+
+### DevOps Notebook Location
+
+The DevOps notebook is **code** — it lives in the Code workspace (`CRM-Dev`/`CRM-Prod`), not the Data workspace. It reaches across to the Data workspace via `DATA_WORKSPACE_ID` environment variable. Uses `semantic-link-labs` for Direct Lake connection updates and report rebinding.
+
+### Deployment Pipeline Prerequisites
+
+- Items must be **initially created in Data-Dev and first deployed through the pipeline** to establish pairing
+- Once paired, subsequent deploys update the paired items
+- Deployment pipelines copy metadata only — lakehouse data is preserved, never overwritten
+- **Shortcuts are overwritten** during deployment — use Variable Libraries for environment-specific targets
+
+### Embed URL Strategy
+
+Embed URLs use the format: `https://app.fabric.microsoft.com/reportEmbed?reportId={reportId}&autoAuth=true&ctid={tenantId}`
+
+- Only `reportId` differs between Dev and Prod (tenantId is constant)
+- Store environment-specific `reportId` in app config (`appsettings.json`)
+- Update after fresh pipeline deploy (reportId changes per stage)
+- For long-term: consider dynamic resolution via `Get Reports In Group` REST API using workspace name + report name
+
+### What Fabricon R Solves
+
+| Problem | Solution |
+|---------|----------|
+| Git logicalId conflicts | Reports aren't in Git |
+| Deployment pipeline logicalId conflicts | Pipeline pairing via initial deploy |
+| Embed URL breaks on promotion | Environment-specific `reportId` in app config |
+| Semantic model → wrong lakehouse | DevOps notebook rebinds via Semantic Link Labs |
+| Report → wrong semantic model | DevOps notebook rebinds via `report_rebind()` |
+| Code workspace clutter from report files | Reports in Data workspace, not Git-controlled |
 
 ## Fabricon N: Code Organization Using Notebooks
 
@@ -211,6 +280,63 @@ if currentWorkspaceId == PROD_WORKSPACE_ID:
 else:  # Fallback to DEV — enables feature workspaces without code changes
     dataWorkspaceId = DATA_DEV_WORKSPACE_ID
 ```
+
+### Shortcut Provisioning
+
+Applies to any Fabricon pattern using cross-lakehouse shortcuts (Fabricon 2, 3, 4).
+
+#### Key Insight
+
+OneLake shortcuts are **pointers to storage paths**, not references to live table objects. They can be created **before source tables exist**. When notebooks later populate Bronze/Silver tables, shortcuts automatically resolve.
+
+#### Where to Place
+
+Shortcut provisioning belongs in **tier notebooks** (`02 - Silver.Notebook`, `03 - Gold.Notebook`), not the DevOps notebook:
+- Each tier notebook has its **default lakehouse connected** — `notebookutils.lakehouse.createShortcut()` targets the default lakehouse
+- The **DevOps notebook has no lakehouse connected** (its job is to rebind other notebooks)
+- Shortcuts are **idempotent** — safe to run every pipeline execution
+
+#### Provisioning Sequence
+
+1. Lakehouses pre-exist in Data workspace (manually or via deployment pipeline)
+2. Tier notebooks create shortcuts before pipeline steps (pointing to paths that may be empty on first run)
+3. Pipeline steps populate tables
+4. Shortcuts automatically resolve — tables appear via `Bronze.*` and `Silver.*` schemas
+
+#### Implementation
+
+Use `LakeHouseDataService.table_exists()` to check if a shortcut exists, `sempy.fabric.list_items()` to resolve source lakehouse IDs, and `notebookutils.lakehouse.createShortcut()` to create:
+
+```python
+import sempy.fabric as fabric
+from unite_digital.lakehouse_data_service import LakeHouseDataService
+
+data_workspace_id = os.getenv("DATA_WORKSPACE_ID")
+if data_workspace_id is None:
+    raise ValueError("`DATA_WORKSPACE_ID` environment variable is not defined")
+
+data_service = LakeHouseDataService(spark, notebookutils, DeltaTable)
+lakehouses = fabric.list_items(type="Lakehouse", workspace=data_workspace_id)
+bronze_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRM-Bronze"]["Id"].values[0]
+
+shortcuts = {"Customer": "/Tables/dbo/Customer"}
+
+for name, path in shortcuts.items():
+    shortcut_name = f"Bronze.{name}"
+    if not data_service.table_exists(shortcut_name):
+        notebookutils.lakehouse.createShortcut(
+            shortcutName=shortcut_name, targetPath=path,
+            sourceLakehouseId=bronze_lakehouse_id, sourceWorkspaceId=data_workspace_id
+        )
+```
+
+Best practices:
+- **Idempotent** — use `table_exists()` to check before creating, safe to re-run every execution
+- **Manifest-driven** — define all shortcuts in a dictionary/config
+- **Environment-agnostic** — use `DATA_WORKSPACE_ID` to target correct workspace
+- **Fail fast** — raise `ValueError` if `DATA_WORKSPACE_ID` is not defined
+
+> For environment-specific shortcut targets, use Fabric Variable Libraries. For cross-lakehouse shortcuts within the same workspace, Variable Libraries are not needed.
 
 ### Unit Testing
 

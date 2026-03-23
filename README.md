@@ -15,7 +15,8 @@ Fabricon aims to provide guidance on how to manage software projects of varying 
 5. Unit testing
 6. Automated documentation
 7. Branching strategy
-8. Deployment to production
+8. Notebook deployment to production
+9. Report deployment to production
 
 ## Who is it for?
 
@@ -38,6 +39,7 @@ The engineering team at [Unite Digital LLC](https://unitedigital.com) was tasked
 - [Fabricon 4: Seamless Reporting with Database Mirroring](./Fabricon4/README.md)
 - Fabricon 5: Realtime Reporting with EventHouse (Coming soon)
 - [Fabricon N: Code Organization Using Notebooks](./FabriconN/README.md)
+- [Fabricon R: Report Promotion Across Environments](./FabriconR/README.md)
 
 > Any Fabricon pattern ending in a letter instead a number indicates that it is an extension that can be applied to any numbered Fabricon pattern.
 

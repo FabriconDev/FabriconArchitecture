@@ -37,7 +37,7 @@ Another questions that teams run into is whether to choose a lakehouse or a ware
 3. Query performance of lakehouse table is comparable to warehouse table.
 4. [Entity Framework Core](https://learn.microsoft.com/en-us/ef/core/) works well with both the warehouse and the lakehouse.
 
-As a result, we opted to use lakehouse for the flexibility if offers over the warehouse. 
+As a result, we opted to use lakehouse for the flexibility if offers over the warehouse.
 > Fabricon recommends that if you do not have an explicit need to use warehouse then use lakehouse instead.
 
 ## Lakehouse Schema
@@ -88,12 +88,37 @@ Fabricon recommends following folder structure:
 - **Archive**: Folder to keep archived items before they are deleted.
 - **Exploration**: Folder to keep items used for research purposes.
 - **Pipelines**: Folder to keep items related to the main workflow. See [Fabricon N](../FabriconN/README.md) for recommended pipeline orchestration and code organization.
-- **Reports**: Folder to keep Power BI reports.
+- **Reports**: Folder to keep Power BI reports. See [Fabricon R](../FabriconR/README.md) for guidance on promoting reports across environments — Fabricon R recommends placing reports in Data workspaces instead.
 - **Tests**: Folder to keep items that test pipelines.
 
 Readme notebook should be on the root of each workspace that has necessary information.
 
-![Recommended folder structure](../Images/folder-structure-simple.png)
+```text
+CRM-Dev / CRM-Prod
+├── 📁 Archive
+├── 📁 Exploration
+├── 📁 Pipelines
+├── 📁 Reports
+├── 📁 Tests
+└── 📓 Readme
+```
+
+> When using [Fabricon R](../FabriconR/README.md), the Reports folder moves to the Data workspace:
+
+```text
+Code Workspace (CRM-Dev / CRM-Prod)
+├── 📁 Archive
+├── 📁 Exploration
+├── 📁 Pipelines
+├── 📁 Tests
+└── 📓 Readme
+
+Data Workspace (CRM-Data-Dev / CRM-Data-Prod)
+├── 📁 Reports
+├── 🗄️ CRM-Bronze Lakehouse
+├── 🗄️ CRM-Silver Lakehouse
+└── 🗄️ CRM-Gold Lakehouse
+```
 
 ## Pipeline Notifications
 
@@ -102,4 +127,3 @@ Readme notebook should be on the root of each workspace that has necessary infor
 Production pipelines should notify stakeholders of execution outcomes. A common pattern is to generate an HTML email with per-step results including step name, start/end times, duration, success/failure status, and notes.
 
 Teams can use the [Office 365 Connector](https://learn.microsoft.com/en-us/connectors/office365/) or similar service to send these notifications. For a structured approach to capturing per-step results, see [Fabricon N - Pipeline Result Tracking](../FabriconN/README.md#1-pipeline-result-tracking).
-
