@@ -53,7 +53,7 @@ Created by the engineering team at Unite Digital LLC.
 | Reporting on mirrors? | Intermediary lakehouse with shortcuts (F4) |
 | Report promotion? | Reports in Data workspaces (not Git), promote via Deployment Pipeline (FR) |
 | Embed URLs? | Store `reportId` in app config; resolve per environment |
-| Shortcut provisioning? | DevOps notebook via REST API or notebookutils (one-time, idempotent) |
+| Shortcut provisioning? | Tier notebooks (Silver, Gold) using `table_exists()` + `createShortcut()` (idempotent, every run) |
 | Naming convention? | `Domain-Environment[-Layer]` (e.g., `CRM-Dev`, `CRM-Data-Prod`) |
 
 ## Fabricon 1: Basic Environment Segregation
