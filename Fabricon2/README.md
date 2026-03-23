@@ -87,10 +87,19 @@ Fabricon recommends following folder structure:
 
 - **Archive**: Folder to keep archived items before they are deleted.
 - **Exploration**: Folder to keep items used for research purposes.
-- **Pipelines**: Folder to keep items related to the main workflow. Pipeline orchestrator (data pipeline or notebook) should be named `00 - Main`. You may choose to have numeric prefix for each pipeline step or use [Fabricon N](../FabriconN/README.md) approach.
+- **Pipelines**: Folder to keep items related to the main workflow. See [Fabricon N](../FabriconN/README.md) for recommended pipeline orchestration and code organization.
 - **Reports**: Folder to keep Power BI reports.
 - **Tests**: Folder to keep items that test pipelines.
 
 Readme notebook should be on the root of each workspace that has necessary information.
 
 ![Recommended folder structure](../Images/folder-structure-simple.png)
+
+## Pipeline Notifications
+
+> Fabricon recommends sending email notifications on pipeline completion with detailed execution results.
+
+Production pipelines should notify stakeholders of execution outcomes. A common pattern is to generate an HTML email with per-step results including step name, start/end times, duration, success/failure status, and notes.
+
+Teams can use the [Office 365 Connector](https://learn.microsoft.com/en-us/connectors/office365/) or similar service to send these notifications. For a structured approach to capturing per-step results, see [Fabricon N - Pipeline Result Tracking](../FabriconN/README.md#1-pipeline-result-tracking).
+

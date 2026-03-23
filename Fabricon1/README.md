@@ -13,5 +13,4 @@ Each workspace contains all the items required for the data product, which may i
 
 Fabricon recommends following folder structure to organize code. Lakehouse/warehouse can be on the root on the workspace.
 
-
 ![Recommended folder structure](../Images/folder-structure-simple.png)
