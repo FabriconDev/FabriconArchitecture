@@ -6,7 +6,7 @@ Teams building Power BI reports on Microsoft Fabric face a multi-layered promoti
 
 > Fabricon recommends treating reports and semantic models as data artifacts, not code artifacts. They belong in Data workspaces, not in Git-controlled Code workspaces.
 
-Reports and semantic models are tightly coupled to the lakehouses they read from — not to the notebooks that populate those lakehouses. By placing them in Data workspaces, they are promoted via [Fabric Deployment Pipelines](https://learn.microsoft.com/en-us/fabric/cicd/deployment-pipelines/intro-to-deployment-pipelines) rather than Git, eliminating logicalId conflicts entirely.
+Reports and semantic models are tightly coupled to the lakehouses they read from, not to the notebooks that populate those lakehouses. By placing them in Data workspaces, they are promoted via [Fabric Deployment Pipelines](https://learn.microsoft.com/en-us/fabric/cicd/deployment-pipelines/intro-to-deployment-pipelines) rather than Git, eliminating logicalId conflicts entirely.
 
 ## 1. Workspace Structure
 
@@ -15,7 +15,7 @@ Building on [Fabricon 3](../Fabricon3/README.md), which already separates code a
 | Workspace | Contents | Source Control | Promotion Method |
 | --- | --- | --- | --- |
 | `CRM-Dev` | Notebooks, pipelines, DevOps notebook | Git (`develop` branch) | PR merge → `CRM-Prod` |
-| `CRM-Prod` | Notebooks, pipelines, DevOps notebook | Git (`main` branch) | — |
+| `CRM-Prod` | Notebooks, pipelines, DevOps notebook | Git (`main` branch) | N/A |
 | `CRM-Data-Dev` | Lakehouses, semantic models, reports | None | Deployment Pipeline → |
 | `CRM-Data-Prod` | Lakehouses, semantic models, reports | None | ← Deployment Pipeline target |
 
@@ -26,17 +26,20 @@ With Fabricon R, the Reports folder moves from the Code workspace to the Data wo
 ```text
 Code Workspace (CRM-Dev / CRM-Prod)
 ├── 📁 Archive
+├── 📁 Configuration
 ├── 📁 Exploration
-├── 📁 Pipelines
+├── 📁 Pipeline
 ├── 📁 Tests
 └── 📓 Readme
 
 Data Workspace (CRM-Data-Dev / CRM-Data-Prod)
 ├── 📁 Reports
-├── 🗄️ CRM-Bronze Lakehouse
-├── 🗄️ CRM-Silver Lakehouse
-└── 🗄️ CRM-Gold Lakehouse
+├── 🗄️ CRMBronze Lakehouse
+├── 🗄️ CRMSilver Lakehouse
+└── 🗄️ CRMGold Lakehouse
 ```
+
+> Lakehouse names do not support dashes. Use PascalCase (e.g., CRMBronze). For the Gold layer, both CRM and CRMGold are valid since Gold is the externally facing layer.
 
 ## 2. Code Promotion via Git
 
@@ -53,9 +56,9 @@ Reports and semantic models are promoted using a [Fabric Deployment Pipeline](ht
 
 Important behaviors of deployment pipelines:
 
-- **Lakehouse data is preserved** — deployment pipelines copy metadata only; tables and files in the target workspace are never overwritten.
-- **Shortcuts are overwritten** — the pipeline takes the source workspace's shortcut definitions and replaces the target's. Use [Variable Libraries](https://learn.microsoft.com/en-us/fabric/cicd/variable-library/variable-library-overview) for environment-specific shortcut targets.
-- **Reports get new IDs** — the `reportId` GUID in the target workspace is different from the source. This is expected behavior.
+- **Lakehouse data is preserved.** Deployment pipelines copy metadata only; tables and files in the target workspace are never overwritten.
+- **Shortcuts are overwritten.** The pipeline takes the source workspace's shortcut definitions and replaces the target's. Use [Variable Libraries](https://learn.microsoft.com/en-us/fabric/cicd/variable-library/variable-library-overview) for environment-specific shortcut targets.
+- **Reports get new IDs.** The `reportId` GUID in the target workspace is different from the source. This is expected behavior.
 
 ## 4. Post-Deployment Rebind
 
@@ -69,7 +72,7 @@ import sempy_labs.directlake as dl
 dl.update_direct_lake_model_lakehouse_connection(
     "CrmReports",              # semantic model name
     data_workspace_id,         # target data workspace
-    "CRM-Gold",                # target lakehouse name
+    "CRMGold",                 # target lakehouse name
     data_workspace_id          # lakehouse workspace
 )
 ```
@@ -89,7 +92,7 @@ rpt.report_rebind(
 
 **Notebook → Prod lakehouse**: Updates all notebook default lakehouse connections in parallel (existing DevOps notebook functionality, see [Fabricon N - Deployment](../FabriconN/README.md#10-deployment)).
 
-> The DevOps notebook is code — it lives in the Git-controlled Code workspace (`CRM-Dev` / `CRM-Prod`), not in the Data workspace. It reaches across to the Data workspace via the `DATA_WORKSPACE_ID` environment variable. See [Fabricon N - Deployment](../FabriconN/README.md#10-deployment) for details on the `Common` notebook pattern.
+> The DevOps notebook is code and lives in the Git-controlled Code workspace (`CRM-Dev` / `CRM-Prod`), not in the Data workspace. It reaches across to the Data workspace via the `DATA_WORKSPACE_ID` environment variable. See [Fabricon N - Deployment](../FabriconN/README.md#10-deployment) for details on the `Common` notebook pattern.
 
 ## 5. Embed URL Strategy
 
@@ -103,7 +106,7 @@ Key observations:
 
 - The `tenantId` is constant across all environments.
 - The `reportId` is the only value that differs between Dev and Prod.
-- The embed URL does not include a `workspaceId` — the `reportId` alone is globally unique within a tenant.
+- The embed URL does not include a `workspaceId` because the `reportId` alone is globally unique within a tenant.
 - The `reportId` in the target workspace is **different** from the source workspace after deployment pipeline promotion.
 
 > Fabricon recommends storing environment-specific `reportId` values in application configuration (e.g., `appsettings.json`).

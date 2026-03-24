@@ -72,14 +72,14 @@ class PipelineStepBase(ABC):
 
     @abstractmethod
     def _get_data(self) -> DataFrame:  # A `DataFrame` containing the query results
-        """Mehtod to get data need to run this pipeline step"""
+        """Method to get data needed to run this pipeline step"""
         pass
 
     @abstractmethod
     def _write_to_lakehouse(
         self, df: DataFrame  # A `DataFrame` containing the query results
     ):
-        """Mehtod to write data from this pipeline step to lakehouse"""
+        """Method to write data from this pipeline step to lakehouse"""
         pass
 
     @abstractmethod
@@ -310,6 +310,40 @@ There are many good unit testing strategies and frameworks available for Python.
 
 ![Diagram showing unit testing strategy](../Images/unit-testing.png)
 
+Fabricon distinguishes between two categories of test notebooks, both housed in the `Tests/` folder:
+
+### Integration Tests (LakeHouseDataServiceTests)
+
+`LakeHouseDataServiceTests` exercises real lakehouse operations against an actual lakehouse. These tests verify that `LakeHouseDataService` methods such as `upsert`, `replace`, `execute_query`, and `execute_scalar` work correctly end-to-end with live Delta tables. Because they require a connected lakehouse, they are run in the Fabric workspace rather than locally.
+
+### Logic Tests (BronzeTests, SilverTests, GoldTests)
+
+Per-tier test notebooks (`BronzeTests`, `SilverTests`, `GoldTests`) validate transformation logic using mocked data. The data service is replaced with a mock or an in-memory Spark DataFrame so that tests do not depend on a live lakehouse. This allows the full pipeline step logic including `_get_data()`, `_write_to_lakehouse()`, and `run()` to be exercised in isolation.
+
+Example pattern for a mocked pipeline step test:
+
+```python
+# BronzeTests
+
+%run ../Pipeline/CrmCustomerPipelineStep
+
+class MockDataService:
+    def execute_query(self, sql):
+        return spark.createDataFrame([{"Id": 1, "Name": "Test"}])
+
+    def upsert(self, df, table, condition):
+        self._last_written = df
+
+mock_service = MockDataService()
+step = CrmCustomerPipelineStep(spark)
+step.data_service = mock_service
+
+result = step.run()
+assert result.is_success, f"Step failed: {result.message}"
+assert mock_service._last_written.count() == 1
+print("BronzeTests passed")
+```
+
 ## 8. Automated Documentation
 
 Teams using [GitHub](https://github.com) can make use of [nbdev](https://nbdev.fast.ai) to automatically generate documentation from code as [GitHub Pages](https://pages.github.com).
@@ -394,28 +428,17 @@ with ThreadPoolExecutor() as executor:
 
 Following code shows contents of `Common` notebook:
 
+> **Setup prerequisite:** Before running pipelines, create a Config Variable Library in both Dev and Prod workspaces with `DATA_ENVIRONMENT` and `DATA_WORKSPACE_ID` keys.
+
 ```python
-import sempy.fabric as fabric
+import os
 
-currentWorkspaceId = fabric.get_notebook_workspace_id()
+# Read environment configuration from Variable Library
+DATA_ENVIRONMENT = notebookutils.credentials.getSecret("Config", "DATA_ENVIRONMENT")
+DATA_WORKSPACE_ID = notebookutils.credentials.getSecret("Config", "DATA_WORKSPACE_ID")
 
-# Code workspaces
-CRM_DEV_WORKSPACE_ID = "00000000-0000-0000-0000-000000000001"
-CRM_PROD_WORKSPACE_ID = "00000000-0000-0000-0000-000000000002"
-
-# Data workspaces
-CRM_DATA_DEV_WORKSPACE_ID = "00000000-0000-0000-0000-000000000003"
-CRM_DATA_PROD_WORKSPACE_ID = "00000000-0000-0000-0000-000000000004"
-
-if currentWorkspaceId == CRM_PROD_WORKSPACE_ID:
-    dataWorkspaceId = CRM_DATA_PROD_WORKSPACE_ID
-    dataEnvironment = "PROD"
-else: #Fallback to DEV environment. This enable DEV and any feature workspace to work without code changes.
-    dataWorkspaceId = CRM_DATA_DEV_WORKSPACE_ID
-    dataEnvironment = "DEV"
-
-os.environ["DATA_WORKSPACE_ID"] = dataWorkspaceId
-os.environ["DATA_ENVIRONMENT"] = dataEnvironment
+os.environ["DATA_ENVIRONMENT"] = DATA_ENVIRONMENT
+os.environ["DATA_WORKSPACE_ID"] = DATA_WORKSPACE_ID
 ```
 
 > [Fabricon 3](../Fabricon3/README.md) explains the reason for having code and data in separate workspaces.
@@ -441,22 +464,72 @@ OneLake shortcuts are pointers to storage paths, not references to live table ob
 
 Shortcut provisioning belongs in the **tier notebooks** (`02 - Silver.Notebook`, `03 - Gold.Notebook`), not the DevOps notebook. This is because:
 
-1. **Each tier notebook has its default lakehouse connected** — `notebookutils.lakehouse.createShortcut()` creates shortcuts in the default lakehouse, so Silver's notebook creates shortcuts in TaggingSilver, Gold's notebook creates shortcuts in the Gold lakehouse.
-2. **The DevOps notebook has no lakehouse connected** — it cannot use `notebookutils.lakehouse.createShortcut()` since it has no default lakehouse (its job is to rebind other notebooks' lakehouses).
-3. **Shortcuts are idempotent** — safe to run every pipeline execution, not just during deployment.
+1. **Each tier notebook has its default lakehouse connected**, so shortcuts are created in the correct lakehouse. Silver's notebook creates shortcuts in CRMSilver, and Gold's notebook creates shortcuts in CRMGold.
+2. **The DevOps notebook has no lakehouse connected** and cannot create shortcuts since it has no default lakehouse (its job is to rebind other notebooks' lakehouses).
+3. **Shortcuts are idempotent** and safe to run every pipeline execution, not just during deployment.
 
 ### Provisioning Sequence
 
 1. Lakehouses pre-exist in the Data workspace (created manually or via deployment pipeline)
 2. Tier notebooks create shortcuts before running pipeline steps (pointing to paths that may be empty on first run)
 3. Pipeline steps populate tables
-4. Shortcuts automatically resolve — tables appear via `Bronze.*` and `Silver.*` schemas
+4. Shortcuts automatically resolve, and tables appear via `Bronze.*` and `Silver.*` schemas
 
 ### Implementation
 
-Each tier notebook adds a "Shortcut Provisioning" section after setup and before pipeline steps. Use [`LakeHouseDataService.table_exists()`](../Basics/README.md) to check if a shortcut already exists, [`notebookutils`](https://learn.microsoft.com/en-us/fabric/data-engineering/notebook-utilities) to create shortcuts, and [`sempy.fabric`](https://learn.microsoft.com/en-us/python/api/semantic-link-sempy/sempy.fabric) to resolve source lakehouse IDs by name.
+Each tier notebook adds a "Shortcut Provisioning" section after setup and before pipeline steps. Use [`LakeHouseDataService.table_exists()`](../Basics/README.md) to check if a shortcut already exists, the Fabric REST API to create shortcuts, and [`sempy.fabric`](https://learn.microsoft.com/en-us/python/api/semantic-link-sempy/sempy.fabric) to resolve source lakehouse IDs by name.
 
-**Silver notebook** — creates Bronze schema shortcuts:
+> **Note:** `notebookutils.lakehouse.createShortcut()` is broken. Use the shared `create_shortcut()` function below, which is defined in `Common.Notebook` and calls the Fabric REST API directly.
+
+The following `create_shortcut()` function lives in `Common.Notebook` and is available to all tier notebooks via `%run Common`:
+
+```python
+import requests
+
+def create_shortcut(
+    shortcut_name: str,
+    shortcut_path: str,
+    target_lakehouse_id: str,
+    target_workspace_id: str,
+    target_path: str
+):
+    """Creates a OneLake shortcut via Fabric REST API if it doesn't already exist."""
+    if data_service.table_exists(shortcut_name):
+        return
+
+    token = notebookutils.credentials.getToken("https://api.fabric.microsoft.com")
+
+    lakehouse_id = fabric.get_lakehouse_id()
+    workspace_id = fabric.get_notebook_workspace_id()
+
+    url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/items/{lakehouse_id}/shortcuts"
+
+    payload = {
+        "path": shortcut_path,
+        "name": shortcut_name,
+        "target": {
+            "oneLake": {
+                "workspaceId": target_workspace_id,
+                "itemId": target_lakehouse_id,
+                "path": target_path
+            }
+        }
+    }
+
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    response = requests.post(url, json=payload, headers=headers)
+
+    # 409 Conflict means the shortcut already exists; treat as success
+    if response.status_code == 409:
+        return
+
+    if not response.ok:
+        raise RuntimeError(
+            f"Shortcut '{shortcut_name}' creation failed ({response.status_code}): {response.text}"
+        )
+```
+
+**Silver notebook** creates Bronze schema shortcuts:
 
 ```python
 import os
@@ -470,7 +543,7 @@ if data_workspace_id is None:
 data_service = LakeHouseDataService(spark, notebookutils, DeltaTable)
 
 lakehouses = fabric.list_items(type="Lakehouse", workspace=data_workspace_id)
-bronze_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRM-Bronze"]["Id"].values[0]
+bronze_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRMBronze"]["Id"].values[0]
 
 bronze_shortcuts = {
     "Customer": "/Tables/dbo/Customer",
@@ -479,20 +552,17 @@ bronze_shortcuts = {
 }
 
 for name, path in bronze_shortcuts.items():
-    shortcut_name = f"Bronze.{name}"
-    if not data_service.table_exists(shortcut_name):
-        notebookutils.lakehouse.createShortcut(
-            shortcutName=shortcut_name,
-            targetPath=path,
-            sourceLakehouseId=bronze_lakehouse_id,
-            sourceWorkspaceId=data_workspace_id
-        )
-        print(f"Created shortcut {shortcut_name}")
-    else:
-        print(f"Shortcut {shortcut_name} already exists, skipping")
+    create_shortcut(
+        shortcut_name=f"Bronze.{name}",
+        shortcut_path="/Tables/Bronze",
+        target_lakehouse_id=bronze_lakehouse_id,
+        target_workspace_id=data_workspace_id,
+        target_path=path
+    )
+    print(f"Provisioned shortcut Bronze.{name}")
 ```
 
-**Gold notebook** — creates both Bronze and Silver schema shortcuts:
+**Gold notebook** creates both Bronze and Silver schema shortcuts:
 
 ```python
 import os
@@ -506,8 +576,8 @@ if data_workspace_id is None:
 data_service = LakeHouseDataService(spark, notebookutils, DeltaTable)
 
 lakehouses = fabric.list_items(type="Lakehouse", workspace=data_workspace_id)
-bronze_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRM-Bronze"]["Id"].values[0]
-silver_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRM-Silver"]["Id"].values[0]
+bronze_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRMBronze"]["Id"].values[0]
+silver_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRMSilver"]["Id"].values[0]
 
 bronze_shortcuts = {
     "Customer": "/Tables/dbo/Customer",
@@ -519,30 +589,24 @@ silver_shortcuts = {
 }
 
 for name, path in bronze_shortcuts.items():
-    shortcut_name = f"Bronze.{name}"
-    if not data_service.table_exists(shortcut_name):
-        notebookutils.lakehouse.createShortcut(
-            shortcutName=shortcut_name,
-            targetPath=path,
-            sourceLakehouseId=bronze_lakehouse_id,
-            sourceWorkspaceId=data_workspace_id
-        )
-        print(f"Created shortcut {shortcut_name}")
-    else:
-        print(f"Shortcut {shortcut_name} already exists, skipping")
+    create_shortcut(
+        shortcut_name=f"Bronze.{name}",
+        shortcut_path="/Tables/Bronze",
+        target_lakehouse_id=bronze_lakehouse_id,
+        target_workspace_id=data_workspace_id,
+        target_path=path
+    )
+    print(f"Provisioned shortcut Bronze.{name}")
 
 for name, path in silver_shortcuts.items():
-    shortcut_name = f"Silver.{name}"
-    if not data_service.table_exists(shortcut_name):
-        notebookutils.lakehouse.createShortcut(
-            shortcutName=shortcut_name,
-            targetPath=path,
-            sourceLakehouseId=silver_lakehouse_id,
-            sourceWorkspaceId=data_workspace_id
-        )
-        print(f"Created shortcut {shortcut_name}")
-    else:
-        print(f"Shortcut {shortcut_name} already exists, skipping")
+    create_shortcut(
+        shortcut_name=f"Silver.{name}",
+        shortcut_path="/Tables/Silver",
+        target_lakehouse_id=silver_lakehouse_id,
+        target_workspace_id=data_workspace_id,
+        target_path=path
+    )
+    print(f"Provisioned shortcut Silver.{name}")
 ```
 
 ### Best Practices
@@ -560,14 +624,32 @@ For shortcuts that need to point to different external sources per environment (
 
 ### Shortcut Structure in Gold Lakehouse
 
+> Lakehouse names do not support dashes. Use PascalCase (e.g., CRMBronze). For the Gold layer, both `CRM` and `CRMGold` are valid since Gold is the externally facing layer.
+
 ```text
-Gold Lakehouse (e.g., CRM-Gold)
+Gold Lakehouse (e.g., CRMGold)
 ├── Tables/
-│   ├── dbo.*          — native Gold layer tables
-│   ├── Bronze.*       — shortcuts to Bronze lakehouse dbo.* tables
-│   └── Silver.*       — shortcuts to Silver lakehouse dbo.* tables
+│   ├── dbo.*          (native Gold layer tables)
+│   ├── Bronze.*       (shortcuts to CRMBronze lakehouse dbo.* tables)
+│   └── Silver.*       (shortcuts to CRMSilver lakehouse dbo.* tables)
 └── Files/
 ```
+
+## 12. Folder Structure
+
+Fabricon recommends organizing workspace items into folders using a standard layout. This makes it easy to navigate workspaces of any size.
+
+```text
+Archive/          - Retired or deprecated items kept for reference
+Configuration/    - Variable Libraries and environment configuration items
+Exploration/      - Ad-hoc analysis and investigative notebooks
+Pipeline/         - Orchestration notebooks (Main, Bronze, Silver, Gold) and pipeline step notebooks
+Reports/          - Power BI reports and semantic models
+Tests/            - Test notebooks (LakeHouseDataServiceTests, BronzeTests, SilverTests, GoldTests)
+Readme            - The workspace readme notebook
+```
+
+> The folder name `Pipeline` is singular. Avoid `Pipelines` (plural).
 
 ## What Fabricon N Solves
 

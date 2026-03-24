@@ -43,6 +43,20 @@ The engineering team at [Unite Digital LLC](https://unitedigital.com) was tasked
 
 > Any Fabricon pattern ending in a letter instead a number indicates that it is an extension that can be applied to any numbered Fabricon pattern.
 
+## Using with Claude Code
+
+This repository includes a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skill that provides context-aware guidance on Fabricon patterns. When you use Claude Code in this repository, it automatically understands Fabricon's workspace conventions, medallion architecture, shortcut provisioning, deployment strategies, and report promotion patterns.
+
+**Getting started:**
+
+1. Install [Claude Code](https://docs.anthropic.com/en/docs/claude-code) if you have not already.
+2. Open a terminal in this repository and run `claude`.
+3. Ask any question about Fabricon patterns. For example: "What workspace structure should I use for a new CRM project?" or "How do I set up shortcut provisioning in my Gold notebook?"
+
+Claude Code will use the `fabricon-architecture` skill located in `.claude/skills/fabricon-architecture/SKILL.md` to provide answers grounded in Fabricon's conventions.
+
+> You can also reference patterns directly by saying "Fabricon 2", "Fabricon 3R", "Fabricon N", etc.
+
 ## Recognition
 
 - Author: Shahid Syed [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/smsyed)

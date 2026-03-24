@@ -20,11 +20,13 @@ Nine workspaces for just two environments may be an overkill for most projects, 
 
 Each workspace has
 
-- `CRM-Bronze` lakehouse
-- `CRM-Silver` lakehouse
-- `CRM-Gold` (or simply `CRM`) lakehouse/warehouse
+- `CRMBronze` lakehouse
+- `CRMSilver` lakehouse
+- `CRMGold` (or simply `CRM`) lakehouse/warehouse
 - Data pipelines, if any
 - Notebooks, if any
+
+> Lakehouse names do not support dashes. Use PascalCase (e.g., CRMBronze). For the Gold layer, both CRM and CRMGold are valid since Gold is the externally facing layer.
 
 This approach allows teams to run their entire Medallion architecture workflows in lower environments without impacting production environment.
 
@@ -86,9 +88,10 @@ For the CRM example, Fabricon suggest following branching strategy:
 Fabricon recommends following folder structure:
 
 - **Archive**: Folder to keep archived items before they are deleted.
+- **Configuration**: Folder to keep shared configuration notebooks (e.g., Common.Notebook, DevOps.Notebook).
 - **Exploration**: Folder to keep items used for research purposes.
-- **Pipelines**: Folder to keep items related to the main workflow. See [Fabricon N](../FabriconN/README.md) for recommended pipeline orchestration and code organization.
-- **Reports**: Folder to keep Power BI reports. See [Fabricon R](../FabriconR/README.md) for guidance on promoting reports across environments — Fabricon R recommends placing reports in Data workspaces instead.
+- **Pipeline**: Folder to keep items related to the main workflow. See [Fabricon N](../FabriconN/README.md) for recommended pipeline orchestration and code organization.
+- **Reports**: Folder to keep Power BI reports. See [Fabricon R](../FabriconR/README.md) for guidance on promoting reports across environments. Fabricon R recommends placing reports in Data workspaces instead.
 - **Tests**: Folder to keep items that test pipelines.
 
 Readme notebook should be on the root of each workspace that has necessary information.
@@ -96,8 +99,9 @@ Readme notebook should be on the root of each workspace that has necessary infor
 ```text
 CRM-Dev / CRM-Prod
 ├── 📁 Archive
+├── 📁 Configuration
 ├── 📁 Exploration
-├── 📁 Pipelines
+├── 📁 Pipeline
 ├── 📁 Reports
 ├── 📁 Tests
 └── 📓 Readme
@@ -108,16 +112,17 @@ CRM-Dev / CRM-Prod
 ```text
 Code Workspace (CRM-Dev / CRM-Prod)
 ├── 📁 Archive
+├── 📁 Configuration
 ├── 📁 Exploration
-├── 📁 Pipelines
+├── 📁 Pipeline
 ├── 📁 Tests
 └── 📓 Readme
 
 Data Workspace (CRM-Data-Dev / CRM-Data-Prod)
 ├── 📁 Reports
-├── 🗄️ CRM-Bronze Lakehouse
-├── 🗄️ CRM-Silver Lakehouse
-└── 🗄️ CRM-Gold Lakehouse
+├── 🗄️ CRMBronze Lakehouse
+├── 🗄️ CRMSilver Lakehouse
+└── 🗄️ CRMGold Lakehouse
 ```
 
 ## Pipeline Notifications
@@ -132,7 +137,7 @@ Teams can use the [Office 365 Connector](https://learn.microsoft.com/en-us/conne
 
 | Problem | Solution |
 | --- | --- |
-| Microsoft recommends 9 workspaces for 2 environments — overkill for most projects | 2 workspaces with multiple lakehouses per workspace |
+| Microsoft recommends 9 workspaces for 2 environments, which is overkill for most projects | 2 workspaces with multiple lakehouses per workspace |
 | Lakehouse vs warehouse decision | Lakehouse recommended for flexibility, comparable performance, no upfront schema |
 | Notebooks can only connect to one lakehouse at a time | Shortcuts + named schemas (`Bronze.*`, `Silver.*`) for cross-layer access |
 | No structured data organization across medallion layers | `dbo` schema for current layer, named schemas for other layers |

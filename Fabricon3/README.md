@@ -16,7 +16,9 @@ Building on the CRM example, the workspaces should be:
 
 ## CRM-Shared Workspace
 
-This workspace contains all shared items including a shared bronze lakehouse `CRM-Bronze-Shared` with large volume of data. Source control is not required in most case.
+This workspace contains all shared items including a shared bronze lakehouse `CRMBronzeShared` with large volume of data. Source control is not required in most case.
+
+> Lakehouse names do not support dashes. Use PascalCase (e.g., CRMBronze). For the Gold layer, both CRM and CRMGold are valid since Gold is the externally facing layer.
 
 ## CRM-Dev Workspace
 
@@ -32,11 +34,11 @@ These workspaces contains all the data items that include lakehouse, warehouse, 
 
 Each workspace has
 
-- `CRM-Bronze` lakehouse
-- `CRM-Silver` lakehouse
-- `CRM-Gold` (or simply `CRM`) lakehouse/warehouse
+- `CRMBronze` lakehouse
+- `CRMSilver` lakehouse
+- `CRMGold` (or simply `CRM`) lakehouse/warehouse
 
-Each `CRM-Bronze` lakehouse uses [shortcuts](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-shortcuts) to link to large tables/files from `CRM-Bronze-Shared` in `CRM-Shared` workspace.
+Each `CRMBronze` lakehouse uses [shortcuts](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-shortcuts) to link to large tables/files from `CRMBronzeShared` in `CRM-Shared` workspace.
 
 This approach enables full environment segregation without having to duplicate large volume of data.
 
@@ -44,9 +46,9 @@ This approach enables full environment segregation without having to duplicate l
 
 | Problem | Solution |
 | --- | --- |
-| Large bronze datasets duplicated across Dev and Prod | Shared workspace (`CRM-Shared`) with shortcuts to shared data |
+| Large bronze datasets duplicated across Dev and Prod | Shared workspace (`CRM-Shared`) with shortcuts to `CRMBronzeShared` data |
 | Source control mixed with data items | Separate code workspaces (Git-controlled) from data workspaces |
-| Code changes risk impacting production data | Code and data workspaces are independent — code promotion does not touch data |
+| Code changes risk impacting production data | Code and data workspaces are independent, so code promotion does not touch data |
 | Feature branches create full copies of large datasets | Feature workspaces link to same data workspace via `DATA_WORKSPACE_ID` |
 
 ## References

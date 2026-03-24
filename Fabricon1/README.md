@@ -16,8 +16,9 @@ Fabricon recommends following folder structure to organize code. Lakehouse/wareh
 ```text
 CRM-Dev / CRM-Prod
 ├── 📁 Archive
+├── 📁 Configuration
 ├── 📁 Exploration
-├── 📁 Pipelines
+├── 📁 Pipeline
 ├── 📁 Reports
 ├── 📁 Tests
 └── 📓 Readme
@@ -28,7 +29,7 @@ CRM-Dev / CRM-Prod
 | Problem | Solution |
 | --- | --- |
 | Non-production and production code mixed together | Separate Fabric workspace per environment |
-| No consistent project structure | Standardized folder structure (Archive, Exploration, Pipelines, Reports, Tests) |
+| No consistent project structure | Standardized folder structure (Archive, Configuration, Exploration, Pipeline, Reports, Tests) |
 | Unclear promotion path for code changes | Environment-per-workspace enables clear promotion flow |
 
 ## References

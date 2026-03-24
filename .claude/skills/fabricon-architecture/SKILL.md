@@ -9,6 +9,10 @@ description: Use when working on Microsoft Fabric projects that follow Fabricon 
 
 Fabricon is a progressive architectural framework for managing software projects on Microsoft Fabric. It combines data engineering and software engineering best practices into numbered patterns of increasing complexity, plus lettered extensions that apply to any numbered pattern.
 
+## Writing Style
+
+- **No em dashes or double dashes.** Never use `—` or `--` as punctuation. Instead, rephrase using periods, commas, colons, parentheses, or conjunctions (e.g., "and", "so", "because").
+
 Created by the engineering team at Unite Digital LLC.
 
 ## When to Use
@@ -53,26 +57,28 @@ Created by the engineering team at Unite Digital LLC.
 | Reporting on mirrors? | Intermediary lakehouse with shortcuts (F4) |
 | Report promotion? | Reports in Data workspaces (not Git), promote via Deployment Pipeline (FR) |
 | Embed URLs? | Store `reportId` in app config; resolve per environment |
-| Shortcut provisioning? | Tier notebooks (Silver, Gold) using `table_exists()` + `createShortcut()` (idempotent, every run) |
+| Shortcut provisioning? | Tier notebooks (Silver, Gold) using `create_shortcut()` via REST API with `table_exists()` guard (idempotent, every run) |
 | Naming convention? | `Domain-Environment[-Layer]` (e.g., `CRM-Dev`, `CRM-Data-Prod`) |
 
 ## Fabricon 1: Basic Environment Segregation
 
 One Fabric workspace per environment. For a CRM data product:
 
-- `CRM-Dev` — development and testing
-- `CRM-Prod` — production
+- `CRM-Dev` (development and testing)
+- `CRM-Prod` (production)
 
 Each workspace contains all items: lakehouse, data pipeline, notebooks, reports.
 
 ## Fabricon 2: Medallion-Based Environment Architecture
 
-Adds Bronze/Silver/Gold lakehouses **within** each workspace (not separate workspaces per layer — that's overkill for most projects).
+Adds Bronze/Silver/Gold lakehouses **within** each workspace (not separate workspaces per layer, as that is overkill for most projects).
 
 Each workspace has:
-- `CRM-Bronze` lakehouse
-- `CRM-Silver` lakehouse
-- `CRM-Gold` (or simply `CRM`) lakehouse
+- `CRMBronze` lakehouse
+- `CRMSilver` lakehouse
+- `CRMGold` (or simply `CRM`) lakehouse
+
+> Lakehouse names do not support dashes. Use PascalCase (e.g., CRMBronze). For the Gold layer, both CRM and CRMGold are valid since Gold is the externally facing layer.
 
 ### Lakehouse Schema (Cross-Layer Access)
 
@@ -96,11 +102,12 @@ This enables multi-layer access within the one-lakehouse-per-session constraint.
 
 ### Folder Structure
 
-- **Archive** — items pending deletion
-- **Exploration** — research and ad-hoc analysis
-- **Pipelines** — main workflow items
-- **Reports** — Power BI reports (see Fabricon R for guidance on moving reports to Data workspaces)
-- **Tests** — pipeline and data validation tests
+- **Archive**: items pending deletion
+- **Configuration**: environment configuration notebooks and Variable Libraries
+- **Exploration**: research and ad-hoc analysis
+- **Pipeline**: main workflow items
+- **Reports**: Power BI reports (see Fabricon R for guidance on moving reports to Data workspaces)
+- **Tests**: pipeline and data validation tests
 - Readme notebook at workspace root
 
 ### Pipeline Notifications
@@ -111,13 +118,13 @@ Send HTML email on pipeline completion with per-step results: step name, start/e
 
 Separates code and data into different workspaces to avoid duplicating large datasets:
 
-- `CRM-Shared` — shared bronze lakehouse with large data
-- `CRM-Dev` — code (notebooks, pipelines), linked to `develop` branch
-- `CRM-Prod` — code, linked to `main` branch
-- `CRM-Data-Dev` — data lakehouses (Bronze, Silver, Gold)
-- `CRM-Data-Prod` — data lakehouses
+- `CRM-Shared` (shared bronze lakehouse with large data)
+- `CRM-Dev` (code: notebooks, pipelines; linked to `develop` branch)
+- `CRM-Prod` (code; linked to `main` branch)
+- `CRM-Data-Dev` (data lakehouses: Bronze, Silver, Gold)
+- `CRM-Data-Prod` (data lakehouses)
 
-Each `CRM-Bronze` lakehouse uses shortcuts to large tables in `CRM-Bronze-Shared`.
+Each `CRMBronze` lakehouse uses shortcuts to large tables in `CRM-Shared`.
 
 ## Fabricon 4: Seamless Reporting with Database Mirroring
 
@@ -132,12 +139,12 @@ Strategy for near real-time reporting from mirrored databases (SQL Server, Cosmo
 > Connect Power BI to the intermediary lakehouse, not directly to mirrored databases.
 
 For transformations on mirrored data:
-- **SQL Views** — simple but slower (falls back to DirectQuery)
-- **Traditional ETL** — when view performance is unacceptable
+- **SQL Views**: simple but slower (falls back to DirectQuery)
+- **Traditional ETL**: when view performance is unacceptable
 
 ## Fabricon R: Report Promotion Across Environments
 
-Extension that applies to Fabricon 2, 3, and 4 — any pattern needing Power BI report/semantic model promotion.
+Extension that applies to Fabricon 2, 3, and 4, covering any pattern needing Power BI report/semantic model promotion.
 
 ### The Problem
 
@@ -145,14 +152,14 @@ Power BI reports and semantic models use logical IDs that are workspace-specific
 
 ### Core Principle
 
-**Reports and semantic models are data artifacts, not code artifacts.** They belong in Data workspaces (not Git-controlled) and are promoted via Fabric Deployment Pipelines — separate from notebooks/pipelines which flow through Git.
+**Reports and semantic models are data artifacts, not code artifacts.** They belong in Data workspaces (not Git-controlled) and are promoted via Fabric Deployment Pipelines, separate from notebooks/pipelines which flow through Git.
 
 ### Workspace Structure (extends Fabricon 3)
 
 | Workspace | Contents | Source Control | Promotion |
 |-----------|----------|---------------|-----------|
 | `CRM-Dev` | Notebooks, pipelines, DevOps notebook | Git (`develop`) | PR merge → `CRM-Prod` |
-| `CRM-Prod` | Notebooks, pipelines, DevOps notebook | Git (`main`) | — |
+| `CRM-Prod` | Notebooks, pipelines, DevOps notebook | Git (`main`) | N/A |
 | `CRM-Data-Dev` | Lakehouses, semantic models, reports | None | Deployment Pipeline → |
 | `CRM-Data-Prod` | Lakehouses, semantic models, reports | None | ← Target |
 
@@ -163,20 +170,20 @@ Power BI reports and semantic models use logical IDs that are workspace-specific
 1. **Code promotion (Git):** `develop` → PR → `main`. Notebooks and pipelines sync to `CRM-Prod`.
 2. **Report/model promotion (Deployment Pipeline):** `CRM-Data-Dev` → `CRM-Data-Prod`. Reports and semantic models copied to Prod.
 3. **Post-deploy rebind (DevOps notebook in CRM-Prod):**
-   - `update_direct_lake_model_lakehouse_connection()` — repoints semantic model to Prod lakehouse
-   - `report_rebind()` — repoints report to Prod semantic model
+   - `update_direct_lake_model_lakehouse_connection()` repoints semantic model to Prod lakehouse
+   - `report_rebind()` repoints report to Prod semantic model
    - Notebook lakehouse connections updated in parallel
 
 ### DevOps Notebook Location
 
-The DevOps notebook is **code** — it lives in the Code workspace (`CRM-Dev`/`CRM-Prod`), not the Data workspace. It reaches across to the Data workspace via `DATA_WORKSPACE_ID` environment variable. Uses `semantic-link-labs` for Direct Lake connection updates and report rebinding.
+The DevOps notebook is **code** and lives in the Code workspace (`CRM-Dev`/`CRM-Prod`), not the Data workspace. It reaches across to the Data workspace via `DATA_WORKSPACE_ID` environment variable. Uses `semantic-link-labs` for Direct Lake connection updates and report rebinding.
 
 ### Deployment Pipeline Prerequisites
 
 - Items must be **initially created in Data-Dev and first deployed through the pipeline** to establish pairing
 - Once paired, subsequent deploys update the paired items
-- Deployment pipelines copy metadata only — lakehouse data is preserved, never overwritten
-- **Shortcuts are overwritten** during deployment — use Variable Libraries for environment-specific targets
+- Deployment pipelines copy metadata only. Lakehouse data is preserved and never overwritten.
+- **Shortcuts are overwritten** during deployment. Use Variable Libraries for environment-specific targets.
 
 ### Embed URL Strategy
 
@@ -223,10 +230,10 @@ class PipelineStepBase(ABC):
 
 ### Tiered Orchestration
 
-- `00 - Main` — Fabric Data Pipeline orchestrating tier notebooks
-- `01 - Bronze.Notebook` — all ingestion steps
-- `02 - Silver.Notebook` — all transformation steps
-- `03 - Gold.Notebook` — all aggregation/metric steps
+- `00 - Main`: Fabric Data Pipeline orchestrating tier notebooks
+- `01 - Bronze.Notebook`: all ingestion steps
+- `02 - Silver.Notebook`: all transformation steps
+- `03 - Gold.Notebook`: all aggregation/metric steps
 
 Each tier runs independently (own timeout/retry). Steps ordered within tier notebook, not by filename.
 
@@ -271,15 +278,15 @@ Good candidates for wheel packages: `LakeHouseDataService`, logger, email sender
 
 ### Deployment
 
-Post-deployment notebook uses `notebookutils.notebook.updateDefinition()` to repoint notebooks to correct lakehouse per environment. `Common` notebook detects current workspace ID and sets `DATA_WORKSPACE_ID` accordingly.
+Post-deployment notebook uses `notebookutils.notebook.updateDefinition()` to repoint notebooks to the correct lakehouse per environment. Environment configuration is read from a Fabric Variable Library named `Config` using `notebookutils.credentials.getSecret()`:
 
 ```python
 # Common notebook pattern
-if currentWorkspaceId == PROD_WORKSPACE_ID:
-    dataWorkspaceId = DATA_PROD_WORKSPACE_ID
-else:  # Fallback to DEV — enables feature workspaces without code changes
-    dataWorkspaceId = DATA_DEV_WORKSPACE_ID
+DATA_ENVIRONMENT = notebookutils.credentials.getSecret("Config", "DATA_ENVIRONMENT")
+DATA_WORKSPACE_ID = notebookutils.credentials.getSecret("Config", "DATA_WORKSPACE_ID")
 ```
+
+Each workspace (Dev, Prod, feature workspaces) has its own `Config` Variable Library with the appropriate values. This avoids hardcoding workspace IDs in notebooks and ensures feature workspaces work without code changes.
 
 ### Shortcut Provisioning
 
@@ -292,49 +299,89 @@ OneLake shortcuts are **pointers to storage paths**, not references to live tabl
 #### Where to Place
 
 Shortcut provisioning belongs in **tier notebooks** (`02 - Silver.Notebook`, `03 - Gold.Notebook`), not the DevOps notebook:
-- Each tier notebook has its **default lakehouse connected** — `notebookutils.lakehouse.createShortcut()` targets the default lakehouse
+- Each tier notebook has its **default lakehouse connected**, so the REST API targets the correct lakehouse automatically
 - The **DevOps notebook has no lakehouse connected** (its job is to rebind other notebooks)
-- Shortcuts are **idempotent** — safe to run every pipeline execution
+- Shortcuts are **idempotent** and safe to run every pipeline execution
 
 #### Provisioning Sequence
 
 1. Lakehouses pre-exist in Data workspace (manually or via deployment pipeline)
 2. Tier notebooks create shortcuts before pipeline steps (pointing to paths that may be empty on first run)
 3. Pipeline steps populate tables
-4. Shortcuts automatically resolve — tables appear via `Bronze.*` and `Silver.*` schemas
+4. Shortcuts automatically resolve, and tables appear via `Bronze.*` and `Silver.*` schemas
 
 #### Implementation
 
-Use `LakeHouseDataService.table_exists()` to check if a shortcut exists, `sempy.fabric.list_items()` to resolve source lakehouse IDs, and `notebookutils.lakehouse.createShortcut()` to create:
+Use `LakeHouseDataService.table_exists()` to check if a shortcut already exists, `sempy.fabric.list_items()` to resolve source lakehouse IDs, and the Fabric REST API to create shortcuts:
 
 ```python
+import requests
 import sempy.fabric as fabric
 from unite_digital.lakehouse_data_service import LakeHouseDataService
 
-data_workspace_id = os.getenv("DATA_WORKSPACE_ID")
-if data_workspace_id is None:
-    raise ValueError("`DATA_WORKSPACE_ID` environment variable is not defined")
+DATA_ENVIRONMENT = notebookutils.credentials.getSecret("Config", "DATA_ENVIRONMENT")
+DATA_WORKSPACE_ID = notebookutils.credentials.getSecret("Config", "DATA_WORKSPACE_ID")
 
 data_service = LakeHouseDataService(spark, notebookutils, DeltaTable)
-lakehouses = fabric.list_items(type="Lakehouse", workspace=data_workspace_id)
-bronze_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRM-Bronze"]["Id"].values[0]
+lakehouses = fabric.list_items(type="Lakehouse", workspace=DATA_WORKSPACE_ID)
+bronze_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRMBronze"]["Id"].values[0]
+
+
+def create_shortcut(
+    shortcut_name: str,
+    shortcut_path: str,
+    target_lakehouse_id: str,
+    target_workspace_id: str,
+    target_path: str
+):
+    """Creates a OneLake shortcut via Fabric REST API if it doesn't already exist."""
+    if data_service.table_exists(shortcut_name):
+        return
+
+    token = notebookutils.credentials.getToken("https://api.fabric.microsoft.com")
+    lakehouse_id = fabric.get_lakehouse_id()
+    workspace_id = fabric.get_notebook_workspace_id()
+    url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/items/{lakehouse_id}/shortcuts"
+
+    payload = {
+        "path": shortcut_path,
+        "name": shortcut_name,
+        "target": {
+            "oneLake": {
+                "workspaceId": target_workspace_id,
+                "itemId": target_lakehouse_id,
+                "path": target_path
+            }
+        }
+    }
+
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    response = requests.post(url, json=payload, headers=headers)
+    if response.status_code == 409:
+        return
+    if not response.ok:
+        raise RuntimeError(
+            f"Shortcut '{shortcut_name}' creation failed ({response.status_code}): {response.text}"
+        )
+
 
 shortcuts = {"Customer": "/Tables/dbo/Customer"}
 
 for name, path in shortcuts.items():
-    shortcut_name = f"Bronze.{name}"
-    if not data_service.table_exists(shortcut_name):
-        notebookutils.lakehouse.createShortcut(
-            shortcutName=shortcut_name, targetPath=path,
-            sourceLakehouseId=bronze_lakehouse_id, sourceWorkspaceId=data_workspace_id
-        )
+    create_shortcut(
+        shortcut_name=f"Bronze.{name}",
+        shortcut_path="Tables",
+        target_lakehouse_id=bronze_lakehouse_id,
+        target_workspace_id=DATA_WORKSPACE_ID,
+        target_path=path
+    )
 ```
 
 Best practices:
-- **Idempotent** — use `table_exists()` to check before creating, safe to re-run every execution
-- **Manifest-driven** — define all shortcuts in a dictionary/config
-- **Environment-agnostic** — use `DATA_WORKSPACE_ID` to target correct workspace
-- **Fail fast** — raise `ValueError` if `DATA_WORKSPACE_ID` is not defined
+- **Idempotent**: `table_exists()` check inside `create_shortcut()` and 409 handling make it safe to re-run every execution
+- **Manifest-driven**: define all shortcuts in a dictionary/config
+- **Environment-agnostic**: use `DATA_WORKSPACE_ID` from Variable Library to target the correct workspace
+- **Fail fast**: `RuntimeError` raised on unexpected failures
 
 > For environment-specific shortcut targets, use Fabric Variable Libraries. For cross-lakehouse shortcuts within the same workspace, Variable Libraries are not needed.
 
