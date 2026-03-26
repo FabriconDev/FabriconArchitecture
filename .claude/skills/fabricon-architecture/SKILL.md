@@ -54,10 +54,11 @@ Created by the engineering team at Unite Digital LLC.
 | Shared utilities? | Python wheel packages, not custom Spark envs |
 | Incremental loads? | Max-date tracking + Delta MERGE upsert |
 | Deployment? | Post-deployment notebook for lakehouse rebinding |
+| Environment config? | Single Variable Library with workspace-named valuesets, activated at runtime via `set_active_valueset()` |
 | Reporting on mirrors? | Intermediary lakehouse with shortcuts (F4) |
 | Report promotion? | Reports in Data workspaces (not Git), promote via Deployment Pipeline (FR) |
 | Embed URLs? | Store `reportId` in app config; resolve per environment |
-| Shortcut provisioning? | Tier notebooks (Silver, Gold) using `create_shortcut()` via REST API with `table_exists()` guard (idempotent, every run) |
+| Shortcut provisioning? | Tier notebooks (Silver, Gold) using `create_shortcut(name, schema, lakehouse_id, ...)` via REST API with `table_exists()` guard (idempotent, every run) |
 | Naming convention? | `Domain-Environment[-Layer]` (e.g., `CRM-Dev`, `CRM-Data-Prod`) |
 
 ## Fabricon 1: Basic Environment Segregation
@@ -241,7 +242,7 @@ Each tier runs independently (own timeout/retry). Steps ordered within tier note
 
 ### Data Access Abstraction
 
-`LakeHouseDataService` provides: `execute_query`, `execute_scalar`, `upsert` (Delta MERGE), `replace` (overwrite), `read_json_file`, `read_csv_file`. Share via Python wheel package.
+Create a data access abstraction layer (e.g. a `LakehouseDataService` class) that provides methods like: `execute_query`, `execute_scalar`, `upsert` (Delta MERGE), `replace` (overwrite), `read_json_file`, `read_csv_file`. Share via Python wheel package.
 
 ### Incremental Processing
 
@@ -274,19 +275,33 @@ Orchestrator sets `os.environ["PIPELINE_RUN"] = "True"` before running steps.
 
 Use `%pip install https://yourblobstore.com/package.whl?token` instead of custom Spark environments. Custom envs increase session start from 3-10s to 50-120s.
 
-Good candidates for wheel packages: `LakeHouseDataService`, logger, email sender.
+Good candidates for wheel packages: data access service, logger, email sender.
 
 ### Deployment
 
-Post-deployment notebook uses `notebookutils.notebook.updateDefinition()` to repoint notebooks to the correct lakehouse per environment. Environment configuration is read from a Fabric Variable Library named `Config` using `notebookutils.credentials.getSecret()`:
+Post-deployment notebook uses `notebookutils.notebook.updateDefinition()` to repoint notebooks to the correct lakehouse per environment.
+
+#### Variable Library Strategy
+
+Environment configuration is managed through a Config Variable Library with **workspace-named valuesets**. The Config library is created in the Dev workspace and flows to Prod and feature workspaces via source control. Inside it, each workspace is represented as a valueset named `Workspace_{workspace_id}`, containing environment-specific values.
+
+At notebook startup, `set_active_valueset()` passes in the current workspace ID. Since valueset names are based on workspace IDs, the correct valueset is activated without any hardcoded identifiers:
 
 ```python
 # Common notebook pattern
-DATA_ENVIRONMENT = notebookutils.credentials.getSecret("Config", "DATA_ENVIRONMENT")
-DATA_WORKSPACE_ID = notebookutils.credentials.getSecret("Config", "DATA_WORKSPACE_ID")
+import sempy.fabric as fabric
+
+# 1. Activate the valueset matching the current workspace (no hardcoded IDs needed)
+current_workspace_id = fabric.get_notebook_workspace_id()
+set_active_valueset(current_workspace_id, "your-library-id", f"Workspace_{current_workspace_id}")
+
+# 2. Read configuration from the now-active valueset
+config_library = notebookutils.variableLibrary.getLibrary("Config")
+DATA_ENVIRONMENT = config_library.DATA_ENVIRONMENT
+DATA_WORKSPACE_ID = config_library.DATA_WORKSPACE_ID
 ```
 
-Each workspace (Dev, Prod, feature workspaces) has its own `Config` Variable Library with the appropriate values. This avoids hardcoding workspace IDs in notebooks and ensures feature workspaces work without code changes.
+`set_active_valueset()` uses `PATCH /v1/workspaces/{id}/variableLibraries/{id}` to switch the active valueset. The Config Variable Library is scoped to the product (e.g., CRM). Each product manages its own Config library with its own valuesets.
 
 ### Shortcut Provisioning
 
@@ -312,45 +327,48 @@ Shortcut provisioning belongs in **tier notebooks** (`02 - Silver.Notebook`, `03
 
 #### Implementation
 
-Use `LakeHouseDataService.table_exists()` to check if a shortcut already exists, `sempy.fabric.list_items()` to resolve source lakehouse IDs, and the Fabric REST API to create shortcuts:
+Use your data access service's `table_exists()` method to check if a shortcut already exists, `sempy.fabric.list_items()` to resolve source lakehouse IDs, and the Fabric REST API to create shortcuts:
 
 ```python
 import requests
 import sempy.fabric as fabric
-from unite_digital.lakehouse_data_service import LakeHouseDataService
+from delta.tables import DeltaTable
 
-DATA_ENVIRONMENT = notebookutils.credentials.getSecret("Config", "DATA_ENVIRONMENT")
-DATA_WORKSPACE_ID = notebookutils.credentials.getSecret("Config", "DATA_WORKSPACE_ID")
+config_library = notebookutils.variableLibrary.getLibrary("Config")
+DATA_WORKSPACE_ID = config_library.DATA_WORKSPACE_ID
 
-data_service = LakeHouseDataService(spark, notebookutils, DeltaTable)
+# Initialize your data access service (e.g. LakehouseDataService)
+data_service = LakehouseDataService(spark, notebookutils, DeltaTable)
 lakehouses = fabric.list_items(type="Lakehouse", workspace=DATA_WORKSPACE_ID)
 bronze_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRMBronze"]["Id"].values[0]
 
 
 def create_shortcut(
     shortcut_name: str,
-    shortcut_path: str,
+    shortcut_schema: str,
+    shortcut_lakehouse_id: str,
     target_lakehouse_id: str,
     target_workspace_id: str,
-    target_path: str
+    target_table: str
 ):
     """Creates a OneLake shortcut via Fabric REST API if it doesn't already exist."""
-    if data_service.table_exists(shortcut_name):
+    new_table_name = f"{shortcut_schema}.{shortcut_name}"
+    if data_service.table_exists(new_table_name):
         return
 
+    target_table_path = target_table.replace(".", "/")
+
     token = notebookutils.credentials.getToken("https://api.fabric.microsoft.com")
-    lakehouse_id = fabric.get_lakehouse_id()
-    workspace_id = fabric.get_notebook_workspace_id()
-    url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/items/{lakehouse_id}/shortcuts"
+    url = f"https://api.fabric.microsoft.com/v1/workspaces/{target_workspace_id}/items/{shortcut_lakehouse_id}/shortcuts"
 
     payload = {
-        "path": shortcut_path,
+        "path": f"/Tables/{shortcut_schema}",
         "name": shortcut_name,
         "target": {
             "oneLake": {
                 "workspaceId": target_workspace_id,
                 "itemId": target_lakehouse_id,
-                "path": target_path
+                "path": f"/Tables/{target_table_path}"
             }
         }
     }
@@ -365,17 +383,26 @@ def create_shortcut(
         )
 
 
-shortcuts = {"Customer": "/Tables/dbo/Customer"}
+shortcuts = {"Customer": "dbo.Customer"}
 
 for name, path in shortcuts.items():
     create_shortcut(
-        shortcut_name=f"Bronze.{name}",
-        shortcut_path="Tables",
+        shortcut_name=name,
+        shortcut_schema="Bronze",
+        shortcut_lakehouse_id=fabric.get_lakehouse_id(),
         target_lakehouse_id=bronze_lakehouse_id,
         target_workspace_id=DATA_WORKSPACE_ID,
-        target_path=path
+        target_table=path,
     )
 ```
+
+Parameter reference:
+- `shortcut_name`: table name without schema prefix (e.g., `"Customer"`)
+- `shortcut_schema`: schema prefix for the shortcut (e.g., `"Bronze"`, `"Silver"`)
+- `shortcut_lakehouse_id`: lakehouse where the shortcut is created (use `fabric.get_lakehouse_id()` for the current notebook's default lakehouse)
+- `target_lakehouse_id`: source lakehouse containing the actual table
+- `target_workspace_id`: workspace of the source lakehouse
+- `target_table`: dot-notation table path (e.g., `"dbo.Customer"`), converted to slashes internally
 
 Best practices:
 - **Idempotent**: `table_exists()` check inside `create_shortcut()` and 409 handling make it safe to re-run every execution

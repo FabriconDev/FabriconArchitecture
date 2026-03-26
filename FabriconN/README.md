@@ -1,12 +1,12 @@
 # Fabricon N: Code Organization Using Notebooks
 
-> Fabricon N is an extension that can used with either [Fabricon 1](../Fabricon1/README.md), [Fabricon 2](../Fabricon2/README.md) or [Fabricon 3](../Fabricon3/README.md). Use of Fabricon 1 with Fabricon N extension may be referred to as Fabricon 1N and so on.
+> Fabricon N is an extension that can be used with [Fabricon 1](../Fabricon1/README.md), [Fabricon 2](../Fabricon2/README.md) or [Fabricon 3](../Fabricon3/README.md). Use of Fabricon 1 with Fabricon N extension may be referred to as Fabricon 1N and so on.
 
-Traditionally, notebooks are used to different steps in a ETL pipeline where generally a notebook cell represents a step in the pipeline. These notebooks run top to bottom like a script.
+Traditionally, notebooks are used for different steps in an ETL pipeline where generally a notebook cell represents a step in the pipeline. These notebooks run top to bottom like a script.
 
 > Fabricon recommends using classes to organize the code and abstract classes to enforce contract.
 
-Fabricon recommends using classes to organize the code in a way that ensure consistency and enhances testability of the code. Use of abstract class is encouraged to establish a contract for all pipeline steps. In most cases, pipeline steps read data from a source, perform transformation and save to a lakehouse. A sample abstract is listed below that can be used to enforce common contract on all pipeline steps.
+Fabricon recommends using classes to organize the code in a way that ensures consistency and enhances testability. Use of abstract classes is encouraged to establish a contract for all pipeline steps. In most cases, pipeline steps read data from a source, perform transformation and save to a lakehouse.
 
 ## 1. Pipeline Result Tracking
 
@@ -60,7 +60,7 @@ class PipelineResultList:
 
 ## 2. Pipeline Step Contract
 
-With `PipelineResult` in place, the abstract class can be updated to use it as the return type for `run()`. A sample abstract class is listed below that can be used to enforce common contract on all pipeline steps.
+With `PipelineResult` in place, the abstract class can be updated to use it as the return type for `run()`.
 
 ```python
 from abc import ABC, abstractmethod
@@ -89,7 +89,7 @@ class PipelineStepBase(ABC):
 
 ```
 
-Simple implementation of a pipeline step may look like below:
+A simple implementation of a pipeline step:
 
 ```python
 # CrmCustomerPipelineStep
@@ -215,7 +215,7 @@ finally:
 Instead of each pipeline step writing its own data access logic, Fabricon recommends creating a shared data access service (via a [Python wheel package](#6-code-reusability-using-python-wheel-packages)) with common operations. A sample is listed below:
 
 ```python
-class LakeHouseDataService:
+class LakehouseDataService:
     def __init__(self, spark, notebookutils, delta_table):
         self.spark = spark
         self.notebookutils = notebookutils
@@ -249,13 +249,13 @@ class LakeHouseDataService:
         return self.spark.read.schema(schema).csv(path, header=True)
 ```
 
-Usage in a pipeline step may look like below:
+Usage in a pipeline step:
 
 ```python
 class CrmCustomerPipelineStep(PipelineStepBase):
     def __init__(self, spark):
         self.spark = spark
-        self.data_service = LakeHouseDataService(spark, notebookutils, DeltaTable)
+        self.data_service = LakehouseDataService(spark, notebookutils, DeltaTable)
 
     def _get_data(self):
         return self.data_service.execute_query("SELECT * FROM Bronze.Customer")
@@ -292,17 +292,17 @@ Use `upsert` (Delta MERGE) for incremental updates and `replace` (overwrite) for
 
 ## 6. Code Reusability Using Python Wheel Packages
 
-Magic command `run` is limited to running notebooks in current workspace. `notebookutils` has a function that can [run a notebook from any workspace](https://learn.microsoft.com/en-us/fabric/data-engineering/notebook-utilities#reference-a-notebook), but the content of notebook are not brought into the current context.
+Magic command `run` is limited to running notebooks in the current workspace. `notebookutils` has a function that can [run a notebook from any workspace](https://learn.microsoft.com/en-us/fabric/data-engineering/notebook-utilities#reference-a-notebook), but the content of the notebook is not brought into the current context.
 
-Using [Python Binary Distribution Format](https://packaging.python.org/en/latest/specifications/binary-distribution-format/) teams can easily package shared code that can easily consumed in any notebook.
+Using [Python Binary Distribution Format](https://packaging.python.org/en/latest/specifications/binary-distribution-format/) teams can easily package shared code that can be easily consumed in any notebook.
 
-> Fabricon recommends using inline package install instead of creating custom Spark environment. Custom Spark environment take longer to start and harder to maintain.
+> Fabricon recommends using inline package install instead of creating a custom Spark environment. Custom Spark environments take longer to start and are harder to maintain.
 
-Creating custom Spark environment with all custom libraries is a good way to hide complexity from the users, but it increases session start time from 3-10 seconds to 50-120 seconds.
+Creating a custom Spark environment with all custom libraries is a good way to hide complexity from the users, but it increases session start time from 3-10 seconds to 50-120 seconds.
 
 An alternate approach is to publish your wheel package to a blob store and use `%pip install https://yourblobstore.com/youpythonpackage.whl?accesstoken` to load the package where needed.
 
-Good candidates for packaging as a wheel include data access service (e.g., `LakeHouseDataService`), logger and email sender.
+Good candidates for packaging as a wheel include a data access service (e.g., `LakehouseDataService`), a logger, and an email sender.
 
 ## 7. Unit Testing
 
@@ -312,9 +312,9 @@ There are many good unit testing strategies and frameworks available for Python.
 
 Fabricon distinguishes between two categories of test notebooks, both housed in the `Tests/` folder:
 
-### Integration Tests (LakeHouseDataServiceTests)
+### Integration Tests (LakehouseDataServiceTests)
 
-`LakeHouseDataServiceTests` exercises real lakehouse operations against an actual lakehouse. These tests verify that `LakeHouseDataService` methods such as `upsert`, `replace`, `execute_query`, and `execute_scalar` work correctly end-to-end with live Delta tables. Because they require a connected lakehouse, they are run in the Fabric workspace rather than locally.
+`LakehouseDataServiceTests` exercises real lakehouse operations against an actual lakehouse. These tests verify that data access service methods such as `upsert`, `replace`, `execute_query`, and `execute_scalar` work correctly end-to-end with live Delta tables. Because they require a connected lakehouse, they are run in the Fabric workspace rather than locally.
 
 ### Logic Tests (BronzeTests, SilverTests, GoldTests)
 
@@ -365,7 +365,7 @@ Microsoft Fabric offers two ways to promote code from one environment to another
 
 > See [Fabricon 2 - Source Control](../Fabricon2/README.md#source-control) for recommendations on Git integration.
 
-In context of Fabricon N, the main challenge is how to change default lakehouse for notebooks so they are linked to correct lakehouse when code is promoted to one environment to another.
+In context of Fabricon N, the main challenge is how to change the default lakehouse for notebooks so they are linked to the correct lakehouse when code is promoted from one environment to another.
 
 At the time of writing, Fabric deployment pipelines support this via [Deployment Rules](https://learn.microsoft.com/en-us/fabric/cicd/deployment-pipelines/create-rules?tabs=new), but it is manual and impractical for bigger projects.
 
@@ -385,7 +385,7 @@ notebookutils.notebook.updateDefinition(
 
 Fabricon recommends having a notebook for environment variables and another notebook to run post deployment updates to point the notebooks containing code to correct lakehouse.
 
-Following code shows contents of `PostDeployment` notebook:
+The following code shows contents of `PostDeployment` notebook:
 
 ```python
 # Environment variables are defined in Common.
@@ -426,20 +426,74 @@ with ThreadPoolExecutor() as executor:
     executor.map(update_notebook, notebook_list)
 ```
 
-Following code shows contents of `Common` notebook:
+The following code shows contents of `Common` notebook:
 
-> **Setup prerequisite:** Before running pipelines, create a Config Variable Library in both Dev and Prod workspaces with `DATA_ENVIRONMENT` and `DATA_WORKSPACE_ID` keys.
+> **Setup prerequisite:** Create a Config Variable Library in the Dev workspace (it will flow to Prod and feature workspaces via source control). Add a valueset for each workspace, named `Workspace_{workspace_id}`, containing environment-specific values for `DATA_ENVIRONMENT` and `DATA_WORKSPACE_ID`.
 
 ```python
 import os
+import requests
+import sempy.fabric as fabric
+
+
+def set_active_valueset(
+    workspace_id: str,
+    variable_library_id: str,
+    valueset_name: str,
+):
+    """Sets the active value set on a Variable Library via Fabric REST API.
+
+    See: https://learn.microsoft.com/en-us/rest/api/fabric/variablelibrary/items/update-variable-library
+    """
+    token = notebookutils.credentials.getToken("https://api.fabric.microsoft.com")
+
+    url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/variableLibraries/{variable_library_id}"
+
+    payload = {
+        "properties": {
+            "activeValueSetName": f"{valueset_name}",
+        }
+    }
+
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    response = requests.patch(url, json=payload, headers=headers)
+
+    if not response.ok:
+        raise RuntimeError(
+            f"Failed to set active valueset '{valueset_name}' ({response.status_code}): {response.text}"
+        )
+
+
+# Activate the valueset matching the current workspace
+current_workspace_id = fabric.get_notebook_workspace_id()
+set_active_valueset(
+    current_workspace_id,
+    "your-variable-library-id-here",
+    f"Workspace_{current_workspace_id}",
+)
 
 # Read environment configuration from Variable Library
-DATA_ENVIRONMENT = notebookutils.credentials.getSecret("Config", "DATA_ENVIRONMENT")
-DATA_WORKSPACE_ID = notebookutils.credentials.getSecret("Config", "DATA_WORKSPACE_ID")
+config_library = notebookutils.variableLibrary.getLibrary("Config")
+data_environment = config_library.DATA_ENVIRONMENT
+data_workspace_id = config_library.DATA_WORKSPACE_ID
 
-os.environ["DATA_ENVIRONMENT"] = DATA_ENVIRONMENT
-os.environ["DATA_WORKSPACE_ID"] = DATA_WORKSPACE_ID
+os.environ["DATA_ENVIRONMENT"] = data_environment
+os.environ["DATA_WORKSPACE_ID"] = data_workspace_id
 ```
+
+### How It Works
+
+The core problem: code running in `CRM-Prod` needs to load Prod-specific settings, but hardcoding workspace IDs or environment names means the same code cannot run unchanged across Dev, Prod, and feature workspaces.
+
+The solution: a Variable Library named `Config` is created in the Dev workspace (`CRM-Dev`) and checked into source control, so it flows to `CRM-Prod` and feature workspaces along with other code. Inside it, each workspace is represented as a **valueset** named `Workspace_{workspace_id}`. Each valueset contains the same keys (`DATA_ENVIRONMENT`, `DATA_WORKSPACE_ID`, etc.) with environment-specific values.
+
+At notebook startup, `set_active_valueset()` passes in the current workspace ID. Since valueset names are based on workspace IDs, the correct valueset is activated without any hardcoded identifiers. Then `notebookutils.variableLibrary.getLibrary("Config")` reads the now-active valueset's values.
+
+- **No hardcoded identifiers**: the workspace ID is the only input, and it is resolved at runtime
+- **Flows with code**: the Variable Library is checked into Git and deploys alongside notebooks
+- **Zero-touch for new environments**: adding a feature workspace only requires adding a new valueset
+
+> The Config Variable Library is scoped to the product (e.g., CRM). Each product manages its own Config library with its own valuesets.
 
 > [Fabricon 3](../Fabricon3/README.md) explains the reason for having code and data in separate workspaces.
 
@@ -456,9 +510,6 @@ In [Fabricon 2](../Fabricon2/README.md#lakehouse-schema) and [Fabricon 3](../Fab
 
 Manually creating and maintaining these shortcuts across environments is error-prone and does not scale.
 
-### Key Insight
-
-OneLake shortcuts are pointers to storage paths, not references to live table objects. **Shortcuts can be created before the source tables exist.** When notebooks later populate Bronze and Silver tables, shortcuts automatically resolve.
 
 ### Where to Place Shortcut Provisioning
 
@@ -477,32 +528,38 @@ Shortcut provisioning belongs in the **tier notebooks** (`02 - Silver.Notebook`,
 
 ### Implementation
 
-Each tier notebook adds a "Shortcut Provisioning" section after setup and before pipeline steps. Use [`LakeHouseDataService.table_exists()`](../Basics/README.md) to check if a shortcut already exists, the Fabric REST API to create shortcuts, and [`sempy.fabric`](https://learn.microsoft.com/en-us/python/api/semantic-link-sempy/sempy.fabric) to resolve source lakehouse IDs by name.
+Each tier notebook adds a "Shortcut Provisioning" section after setup and before pipeline steps. Use your data access service's `table_exists()` method to check if a shortcut already exists, the Fabric REST API to create shortcuts, and [`sempy.fabric`](https://learn.microsoft.com/en-us/python/api/semantic-link-sempy/sempy.fabric) to resolve source lakehouse IDs by name.
 
-> **Note:** `notebookutils.lakehouse.createShortcut()` is broken. Use the shared `create_shortcut()` function below, which is defined in `Common.Notebook` and calls the Fabric REST API directly.
 
 The following `create_shortcut()` function lives in `Common.Notebook` and is available to all tier notebooks via `%run Common`:
 
 ```python
+import logging
 import requests
 
 def create_shortcut(
     shortcut_name: str,
-    shortcut_path: str,
+    shortcut_schema: str,
+    shortcut_lakehouse_id: str,
     target_lakehouse_id: str,
     target_workspace_id: str,
-    target_path: str
+    target_table: str
 ):
     """Creates a OneLake shortcut via Fabric REST API if it doesn't already exist."""
-    if data_service.table_exists(shortcut_name):
+    new_table_name = f"{shortcut_schema}.{shortcut_name}"
+    if data_service.table_exists(new_table_name):
+        logging.info(f"Shortcut `{new_table_name}` already exists.")
         return
+
+    target_table_path = target_table.replace(".", "/")
+
+    logging.info(f"Creating shortcut `{target_workspace_id}/{target_lakehouse_id}/{target_table_path}`...")
 
     token = notebookutils.credentials.getToken("https://api.fabric.microsoft.com")
 
-    lakehouse_id = fabric.get_lakehouse_id()
-    workspace_id = fabric.get_notebook_workspace_id()
+    url = f"https://api.fabric.microsoft.com/v1/workspaces/{target_workspace_id}/items/{shortcut_lakehouse_id}/shortcuts"
 
-    url = f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/items/{lakehouse_id}/shortcuts"
+    shortcut_path = f"/Tables/{shortcut_schema}"
 
     payload = {
         "path": shortcut_path,
@@ -511,7 +568,7 @@ def create_shortcut(
             "oneLake": {
                 "workspaceId": target_workspace_id,
                 "itemId": target_lakehouse_id,
-                "path": target_path
+                "path": f"/Tables/{target_table_path}"
             }
         }
     }
@@ -534,84 +591,39 @@ def create_shortcut(
 ```python
 import os
 import sempy.fabric as fabric
-from unite_digital.lakehouse_data_service import LakeHouseDataService
+from delta.tables import DeltaTable
 
 data_workspace_id = os.getenv("DATA_WORKSPACE_ID")
 if data_workspace_id is None:
     raise ValueError("`DATA_WORKSPACE_ID` environment variable is not defined")
 
-data_service = LakeHouseDataService(spark, notebookutils, DeltaTable)
+data_service = LakehouseDataService(spark, notebookutils, DeltaTable)
 
 lakehouses = fabric.list_items(type="Lakehouse", workspace=data_workspace_id)
 bronze_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRMBronze"]["Id"].values[0]
 
 bronze_shortcuts = {
-    "Customer": "/Tables/dbo/Customer",
-    "Product":  "/Tables/dbo/Product",
-    "Order":    "/Tables/dbo/Order",
+    "Customer": "dbo.Customer",
+    "Product":  "dbo.Product",
+    "Order":    "dbo.Order",
 }
 
 for name, path in bronze_shortcuts.items():
     create_shortcut(
-        shortcut_name=f"Bronze.{name}",
-        shortcut_path="/Tables/Bronze",
+        shortcut_name=name,
+        shortcut_schema="Bronze",
+        shortcut_lakehouse_id=fabric.get_lakehouse_id(),
         target_lakehouse_id=bronze_lakehouse_id,
         target_workspace_id=data_workspace_id,
-        target_path=path
+        target_table=path,
     )
-    print(f"Provisioned shortcut Bronze.{name}")
 ```
 
-**Gold notebook** creates both Bronze and Silver schema shortcuts:
-
-```python
-import os
-import sempy.fabric as fabric
-from unite_digital.lakehouse_data_service import LakeHouseDataService
-
-data_workspace_id = os.getenv("DATA_WORKSPACE_ID")
-if data_workspace_id is None:
-    raise ValueError("`DATA_WORKSPACE_ID` environment variable is not defined")
-
-data_service = LakeHouseDataService(spark, notebookutils, DeltaTable)
-
-lakehouses = fabric.list_items(type="Lakehouse", workspace=data_workspace_id)
-bronze_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRMBronze"]["Id"].values[0]
-silver_lakehouse_id = lakehouses[lakehouses["Display Name"] == "CRMSilver"]["Id"].values[0]
-
-bronze_shortcuts = {
-    "Customer": "/Tables/dbo/Customer",
-    "Product":  "/Tables/dbo/Product",
-}
-
-silver_shortcuts = {
-    "CustomerOrder": "/Tables/dbo/CustomerOrder",
-}
-
-for name, path in bronze_shortcuts.items():
-    create_shortcut(
-        shortcut_name=f"Bronze.{name}",
-        shortcut_path="/Tables/Bronze",
-        target_lakehouse_id=bronze_lakehouse_id,
-        target_workspace_id=data_workspace_id,
-        target_path=path
-    )
-    print(f"Provisioned shortcut Bronze.{name}")
-
-for name, path in silver_shortcuts.items():
-    create_shortcut(
-        shortcut_name=f"Silver.{name}",
-        shortcut_path="/Tables/Silver",
-        target_lakehouse_id=silver_lakehouse_id,
-        target_workspace_id=data_workspace_id,
-        target_path=path
-    )
-    print(f"Provisioned shortcut Silver.{name}")
-```
+The Gold notebook follows the same pattern, adding both `Bronze` and `Silver` schema shortcuts.
 
 ### Best Practices
 
-- **Idempotent**: Use `LakeHouseDataService.table_exists()` to check before creating. Safe to re-run every pipeline execution.
+- **Idempotent**: The function checks `data_service.table_exists()` and handles `409 Conflict` responses. Safe to re-run every pipeline execution.
 - **Manifest-driven**: Define all shortcuts in a dictionary. Easy to review and update when new tables are added.
 - **Environment-agnostic**: Use `DATA_WORKSPACE_ID` to target the correct workspace. The same code works in Dev and Prod.
 - **Fail fast**: Raise `ValueError` if `DATA_WORKSPACE_ID` is not defined.
@@ -640,13 +652,13 @@ Gold Lakehouse (e.g., CRMGold)
 Fabricon recommends organizing workspace items into folders using a standard layout. This makes it easy to navigate workspaces of any size.
 
 ```text
-Archive/          - Retired or deprecated items kept for reference
-Configuration/    - Variable Libraries and environment configuration items
-Exploration/      - Ad-hoc analysis and investigative notebooks
-Pipeline/         - Orchestration notebooks (Main, Bronze, Silver, Gold) and pipeline step notebooks
-Reports/          - Power BI reports and semantic models
-Tests/            - Test notebooks (LakeHouseDataServiceTests, BronzeTests, SilverTests, GoldTests)
-Readme            - The workspace readme notebook
+├── 📁 Archive          - Retired or deprecated items kept for reference
+├── 📁 Configuration    - Variable Libraries and environment configuration items
+├── 📁 Exploration      - Ad-hoc analysis and investigative notebooks
+├── 📁 Pipeline         - Orchestration notebooks (Main, Bronze, Silver, Gold) and pipeline step notebooks
+├── 📁 Reports          - Power BI reports and semantic models
+├── 📁 Tests            - Test notebooks (LakehouseDataServiceTests, BronzeTests, SilverTests, GoldTests)
+└── 📓 Readme           - The workspace readme notebook
 ```
 
 > The folder name `Pipeline` is singular. Avoid `Pipelines` (plural).
@@ -658,10 +670,11 @@ Readme            - The workspace readme notebook
 | Notebooks run as unstructured scripts with no consistency | Abstract base class enforces `_get_data` / `_write_to_lakehouse` / `run` contract |
 | No visibility into which pipeline steps succeeded or failed | `PipelineResult` and `PipelineResultList` capture per-step execution details |
 | Flat notebook execution with no tier isolation | Tiered orchestration: Main → Bronze → Silver → Gold with independent timeout/retry |
-| Duplicated data access code across notebooks | `LakeHouseDataService` wheel package shared across all steps |
+| Duplicated data access code across notebooks | Data access service wheel package shared across all steps |
 | Full data reload on every pipeline run | Incremental processing via max-date tracking + Delta MERGE upsert |
 | Custom Spark environments slow session startup to 50-120s | Python wheel packages keep session start at 3-10s |
 | Manual notebook lakehouse rebinding after promotion | DevOps notebook automates rebinding via `notebookutils.notebook.updateDefinition()` |
+| Hardcoded workspace IDs or separate Config per workspace | Single Variable Library with workspace-named valuesets activated at runtime via REST API |
 | Manual shortcut creation across environments | Tier notebooks auto-provision shortcuts using `table_exists()` check |
 | No automated testing of notebook code | Unit test notebooks run same code as pipeline steps |
 
@@ -673,5 +686,6 @@ Readme            - The workspace readme notebook
 - [Lakehouse Shortcuts](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-shortcuts)
 - [OneLake Shortcuts REST API](https://learn.microsoft.com/en-us/rest/api/fabric/core/onelake-shortcuts/create-shortcut)
 - [Fabric Variable Libraries](https://learn.microsoft.com/en-us/fabric/cicd/variable-library/variable-library-overview)
+- [Update Variable Library REST API](https://learn.microsoft.com/en-us/rest/api/fabric/variablelibrary/items/update-variable-library)
 - [nbdev - Notebook Documentation](https://nbdev.fast.ai/)
 - [jupyter-black - Code Formatting](https://github.com/n8henrie/jupyter-black)
