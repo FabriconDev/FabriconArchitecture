@@ -1,10 +1,10 @@
 # Fabricon 3: Medallion-Based Environment Architecture for Large Data Volumes
 
-> Fabricon 3 builds on what is presented in [Fabricon 1](../Fabricon1/README.md) and [Fabricon 2](../Fabricon2/README.md).
+> Fabricon 3 builds on concepts introduced in [Fabricon 1](../Fabricon1/README.md) and [Fabricon 2](../Fabricon2/README.md).
 
-Projects dealing with large volumes of data demand a strategy that minimizes duplication of data. Fabricon 3 recommends separating code (notebook, data pipeline etc) and data (lakehouse, warehouse etc) into different workspaces.
+Projects dealing with large volumes of data require strategies to minimize data duplication. Fabricon 3 recommends separating code (e.g., notebooks, data pipelines) and data (e.g., lakehouses, warehouses) into distinct workspaces.
 
-Building on the CRM example, the workspaces should be:
+Using the CRM example, the recommended workspaces are:
 
 - `CRM-Shared`
 - `CRM-Dev`
@@ -12,7 +12,7 @@ Building on the CRM example, the workspaces should be:
 - `CRM-Data-Dev`
 - `CRM-Data-Prod`
 
-> See [Fabricon 2 - Source Control](../Fabricon2/README.md#source-control) for recommendations on Git integration.
+> Refer to [Fabricon 2 - Source Control](../Fabricon2/README.md#source-control) for Git integration recommendations.
 
 ## CRM-Shared Workspace
 
@@ -22,17 +22,17 @@ This workspace contains all shared items including a shared bronze lakehouse `CR
 
 ## CRM-Dev Workspace
 
-This workspace contains all the code items that include notebooks, data pipeline etc. Workspace linked to `develop` branch.
+This workspace contains all code-related items, such as notebooks and data pipelines. It is linked to the `develop` branch.
 
 ## CRM-Prod Workspace
 
-This workspace contains all the code items that include notebooks, data pipeline etc. Workspace linked to `main` branch.
+This workspace contains all code-related items, such as notebooks and data pipelines. It is linked to the `main` branch.
 
-## CRM-Data-Dev & CRM-Data-Prod
+## CRM-Data-Dev & CRM-Data-Prod Workspaces
 
-These workspaces contains all the data items that include lakehouse, warehouse, eventhouse etc. Source control is not required in most case.
+These workspaces contain all data-related items, such as lakehouses, warehouses, and eventhouses. Source control is generally not required.
 
-Each workspace has
+Each workspace includes:
 
 - `CRMBronze` lakehouse
 - `CRMSilver` lakehouse

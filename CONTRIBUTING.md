@@ -1,6 +1,6 @@
 # Contributing
 
-The FabriconDev Engineering Architecture is considered a living, evolving resource. It may change based on new requirements, industry shifts, or lessons learned. All technologists are encouraged to participate in the conversation around the Architecture. The Architecture is [Open Source][open source], and we welcome feedback and contributions from the community.
+The FabriconDev Engineering Architecture is a living, evolving resource. It may change based on new requirements, industry shifts, or lessons learned. All technologists are encouraged to participate in the conversation around the Architecture. The Architecture is [Open Source][open source], and we welcome feedback and contributions from the community.
 
 ## Contributing Directly to the Architecture
 
@@ -29,7 +29,7 @@ Community members are encouraged to take on issues, submit changes, and improve 
 
 ## Contributing to the Architecture Process
 
-Beyond simply fixing issues or adding incremental improvements, community members can shape the Architecture’s future direction by proposing new standards, processes, or guidelines. We use two key mechanisms for this: **RFP (Request for Proposal)** and **RFC (Request for Comments)**.
+Beyond fixing issues or adding incremental improvements, community members can shape the Architecture’s future direction by proposing new standards, processes, or guidelines. We use two key mechanisms for this: **RFP (Request for Proposal)** and **RFC (Request for Comments)**.
 
 ### Request for Proposals (RFP)
 
@@ -53,7 +53,7 @@ An RFC is used to propose a well-defined solution or standard to be integrated i
 1. **Align with an Existing RFP:** Before creating an RFC, ensure there’s a corresponding RFP issue that defines the problem. The RFC is where you present your formalized solution to that problem.  
 2. **Use the RFC Template:** Follow the [Standard RFC Template][template] and recommended RFC workflow. Create a new RFC file in your fork of the repository and describe the solution in detail, including rationale, examples, and expected impact.  
 3. **Open a Pull Request:** Once your RFC is drafted, open a pull request to the Architecture’s RFCs directory. The community will be invited to review, comment, and suggest improvements.  
-4. **Core Contributor Review & Discussion:** A Core Contributor will be assigned to your RFC. This person will help incorporate feedback, ensure all questions are addressed, and guide the proposal through the review process.  
+4. **Core Contributor Review & Discussion:** A core contributor will be assigned to your RFC. This person will help incorporate feedback, ensure all questions are addressed, and guide the proposal through the review process.  
 5. **Comment Period & Approval:** Once the solution has been refined, we will announce a comment period. Community members have a set timeframe to review and provide feedback. Silence from the community during the defined timeframe will be considered approval. If all comments are addressed and the community reaches consensus, the RFC will be marked as approved.  
 6. **Integration:** After approval, the RFC’s solution will be integrated into the Architecture. Issues may be created to reflect the next steps, such as documentation updates, implementation guidelines, or any other necessary follow-up.
 
