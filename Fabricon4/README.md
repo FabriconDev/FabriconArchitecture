@@ -58,3 +58,22 @@ SQL views can be created on a lakehouse table to transform data as needed, but a
 Implementing a traditional ETL goes against the idea of mirroring but may be the only option if the performance of SQL views is not acceptable. With this approach, new tables are created in the reporting lakehouse and included in the default Power BI semantic model.
 
 [Fabricon 5: Realtime Reporting with EventHouse](../Fabricon5/README.md) may be an alternative option.
+
+## What Fabricon 4 Solves
+
+| Problem | Solution |
+| --- | --- |
+| Reports depend on traditional ETL cycles for fresh data | Database mirroring provides near real-time replication |
+| Power BI cannot connect to multiple mirrored databases at once | Intermediary reporting lakehouse combines sources via shortcuts |
+| Mirrored tables are read-only with no transformation support | SQL views for simple transforms, traditional ETL when performance matters |
+| Cosmos DB mirrors all columns as strings | ETL or SQL views to cast data types for proper Power BI grouping |
+| Direct connection to mirrored databases is fragile | Connect Power BI to intermediary lakehouse, not directly to mirrors |
+
+## References
+
+* [Database Mirroring in Fabric](https://learn.microsoft.com/en-us/fabric/database/mirrored-database/overview)
+* [Lakehouse Shortcuts](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-shortcuts)
+* [Default Power BI Semantic Model](https://learn.microsoft.com/en-us/fabric/data-warehouse/semantic-models)
+* [Direct Lake Mode](https://learn.microsoft.com/en-us/fabric/fundamentals/direct-lake-overview)
+* [DirectQuery Mode](https://learn.microsoft.com/en-us/fabric/data-warehouse/semantic-models#direct-lake-mode)
+* [Delta Lake Tables](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-and-delta-tables)

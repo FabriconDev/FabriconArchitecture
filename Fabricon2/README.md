@@ -20,13 +20,15 @@ However, nine workspaces for just two environments may be excessive for most pro
 
 Each workspace includes:
 
-- `CRM-Bronze` lakehouse
-- `CRM-Silver` lakehouse
-- `CRM-Gold` (or simply `CRM`) lakehouse/warehouse
+- `CRMBronze` lakehouse
+- `CRMSilver` lakehouse
+- `CRMGold` (or simply `CRM`) lakehouse/warehouse
 - Data pipelines, if any
 - Notebooks, if any
 
-This approach allows teams to run their entire Medallion architecture workflows in lower environments without impacting the production environment.
+> Lakehouse names do not support dashes. Use PascalCase (e.g., CRMBronze). For the Gold layer, both CRM and CRMGold are valid since Gold is the externally facing layer.
+
+This approach allows teams to run their entire Medallion architecture workflows in lower environments without impacting production environment.
 
 ## Lakehouse vs Warehouse
 
@@ -37,7 +39,8 @@ Another common question teams face is whether to use a lakehouse or a warehouse 
 3. The query performance of lakehouse tables is comparable to warehouse tables.
 4. [Entity Framework Core](https://learn.microsoft.com/en-us/ef/core/) works well with both warehouses and lakehouses.
 
-> Fabricon recommends using a lakehouse unless there is an explicit need for a warehouse.
+As a result, we opted to use lakehouse for the flexibility if offers over the warehouse.
+> Fabricon recommends that if you do not have an explicit need to use warehouse then use lakehouse instead.
 
 ## Lakehouse Schema
 
@@ -84,12 +87,69 @@ For the CRM example, Fabricon suggests the following branching strategy:
 
 Fabricon recommends the following folder structure:
 
-- **Archive**: Folder to store archived items before deletion.
-- **Exploration**: Folder to store items used for research purposes.
-- **Pipelines**: Folder to store items related to the main workflow. The pipeline orchestrator (data pipeline or notebook) should be named `00 - Main`. You may choose to use a numeric prefix for each pipeline step or adopt the [Fabricon N](../FabriconN/README.md) approach.
-- **Reports**: Folder to store Power BI reports.
-- **Tests**: Folder to store items that test pipelines.
+- **Archive**: Folder to keep archived items before they are deleted.
+- **Configuration**: Folder to keep shared configuration notebooks (e.g., Common.Notebook, DevOps.Notebook).
+- **Exploration**: Folder to keep items used for research purposes.
+- **Pipeline**: Folder to keep items related to the main workflow. See [Fabricon N](../FabriconN/README.md) for recommended pipeline orchestration and code organization.
+- **Reports**: Folder to keep Power BI reports. See [Fabricon R](../FabriconR/README.md) for guidance on promoting reports across environments. Fabricon R recommends placing reports in Data workspaces instead.
+- **Tests**: Folder to keep items that test pipelines.
 
 A readme notebook should be placed at the root of each workspace, containing necessary information.
 
-![Recommended folder structure](../Images/folder-structure-simple.png)
+```text
+CRM-Dev / CRM-Prod
+├── 📁 Archive
+├── 📁 Configuration
+├── 📁 Exploration
+├── 📁 Pipeline
+├── 📁 Reports
+├── 📁 Tests
+└── 📓 Readme
+```
+
+> When using [Fabricon R](../FabriconR/README.md), the Reports folder moves to the Data workspace:
+
+```text
+Code Workspace (CRM-Dev / CRM-Prod)
+├── 📁 Archive
+├── 📁 Configuration
+├── 📁 Exploration
+├── 📁 Pipeline
+├── 📁 Tests
+└── 📓 Readme
+
+Data Workspace (CRM-Data-Dev / CRM-Data-Prod)
+├── 📁 Reports
+├── 🗄️ CRMBronze Lakehouse
+├── 🗄️ CRMSilver Lakehouse
+└── 🗄️ CRMGold Lakehouse
+```
+
+## Pipeline Notifications
+
+> Fabricon recommends sending email notifications on pipeline completion with detailed execution results.
+
+Production pipelines should notify stakeholders of execution outcomes. A common pattern is to generate an HTML email with per-step results including step name, start/end times, duration, success/failure status, and notes.
+
+Teams can use the [Office 365 Connector](https://learn.microsoft.com/en-us/connectors/office365/) or similar service to send these notifications. For a structured approach to capturing per-step results, see [Fabricon N - Pipeline Result Tracking](../FabriconN/README.md#1-pipeline-result-tracking).
+
+## What Fabricon 2 Solves
+
+| Problem | Solution |
+| --- | --- |
+| Microsoft recommends 9 workspaces for 2 environments, which is overkill for most projects | 2 workspaces with multiple lakehouses per workspace |
+| Lakehouse vs warehouse decision | Lakehouse recommended for flexibility, comparable performance, no upfront schema |
+| Notebooks can only connect to one lakehouse at a time | Shortcuts + named schemas (`Bronze.*`, `Silver.*`) for cross-layer access |
+| No structured data organization across medallion layers | `dbo` schema for current layer, named schemas for other layers |
+| No branching strategy for Fabric | `main` ↔ Prod, `develop` ↔ Dev, feature branches via "Branch out to new workspace" |
+| No visibility into pipeline execution outcomes | HTML email notifications with per-step results |
+
+## References
+
+- [Medallion Architecture](https://www.databricks.com/glossary/medallion-architecture)
+- [OneLake Medallion Lakehouse Architecture](https://learn.microsoft.com/en-us/fabric/onelake/onelake-medallion-lakehouse-architecture)
+- [Decision Guide: Choose Between Warehouse and Lakehouse](https://learn.microsoft.com/en-us/fabric/get-started/decision-guide-lakehouse-warehouse)
+- [Lakehouse Schemas](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-schemas)
+- [Lakehouse Shortcuts](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-shortcuts)
+- [Git Integration in Fabric](https://learn.microsoft.com/en-us/fabric/cicd/git-integration/intro-to-git-integration)
+- [Office 365 Connector](https://learn.microsoft.com/en-us/connectors/office365/)

@@ -16,7 +16,9 @@ Using the CRM example, the recommended workspaces are:
 
 ## CRM-Shared Workspace
 
-This workspace contains all shared resources, including a shared bronze lakehouse `CRM-Bronze-Shared` with large volumes of data. Source control is generally not required.
+This workspace contains all shared items including a shared bronze lakehouse `CRMBronzeShared` with large volume of data. Source control is not required in most case.
+
+> Lakehouse names do not support dashes. Use PascalCase (e.g., CRMBronze). For the Gold layer, both CRM and CRMGold are valid since Gold is the externally facing layer.
 
 ## CRM-Dev Workspace
 
@@ -32,10 +34,26 @@ These workspaces contain all data-related items, such as lakehouses, warehouses,
 
 Each workspace includes:
 
-- `CRM-Bronze` lakehouse
-- `CRM-Silver` lakehouse
-- `CRM-Gold` (or simply `CRM`) lakehouse/warehouse
+- `CRMBronze` lakehouse
+- `CRMSilver` lakehouse
+- `CRMGold` (or simply `CRM`) lakehouse/warehouse
 
-Each `CRM-Bronze` lakehouse uses [shortcuts](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-shortcuts) to link to large tables/files from the `CRM-Bronze-Shared` lakehouse in the `CRM-Shared` workspace.
+Each `CRMBronze` lakehouse uses [shortcuts](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-shortcuts) to link to large tables/files from `CRMBronzeShared` in `CRM-Shared` workspace.
 
-This approach enables full environment segregation without duplicating large volumes of data.
+This approach enables full environment segregation without having to duplicate large volume of data.
+
+## What Fabricon 3 Solves
+
+| Problem | Solution |
+| --- | --- |
+| Large bronze datasets duplicated across Dev and Prod | Shared workspace (`CRM-Shared`) with shortcuts to `CRMBronzeShared` data |
+| Source control mixed with data items | Separate code workspaces (Git-controlled) from data workspaces |
+| Code changes risk impacting production data | Code and data workspaces are independent, so code promotion does not touch data |
+| Feature branches create full copies of large datasets | Feature workspaces link to same data workspace via `DATA_WORKSPACE_ID` |
+
+## References
+
+- [Lakehouse Shortcuts](https://learn.microsoft.com/en-us/fabric/data-engineering/lakehouse-shortcuts)
+- [OneLake Shortcuts](https://learn.microsoft.com/en-us/fabric/onelake/onelake-shortcuts)
+- [Git Integration in Fabric](https://learn.microsoft.com/en-us/fabric/cicd/git-integration/intro-to-git-integration)
+- [Best Practices for Lifecycle Management in Fabric](https://learn.microsoft.com/en-us/fabric/cicd/best-practices-cicd)

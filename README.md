@@ -15,7 +15,8 @@ Fabricon provides guidance on how to manage software projects of varying complex
 5. Unit testing
 6. Automated documentation
 7. Branching strategy
-8. Deployment to production
+8. Notebook deployment to production
+9. Report deployment to production
 
 ## Who is it for?
 
@@ -38,8 +39,23 @@ The engineering team at [Unite Digital LLC](https://unitedigital.com) was tasked
 - [Fabricon 4: Seamless Reporting with Database Mirroring](./Fabricon4/README.md)
 - Fabricon 5: Realtime Reporting with EventHouse (Coming soon)
 - [Fabricon N: Code Organization Using Notebooks](./FabriconN/README.md)
+- [Fabricon R: Report Promotion Across Environments](./FabriconR/README.md)
 
 > Any Fabricon pattern ending in a letter instead of a number indicates that it is an extension that can be applied to any numbered Fabricon pattern.
+
+## Using with Claude Code
+
+This repository includes a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skill that provides context-aware guidance on Fabricon patterns. When you use Claude Code in this repository, it automatically understands Fabricon's workspace conventions, medallion architecture, shortcut provisioning, deployment strategies, and report promotion patterns.
+
+**Getting started:**
+
+1. Install [Claude Code](https://docs.anthropic.com/en/docs/claude-code) if you have not already.
+2. Open a terminal in this repository and run `claude`.
+3. Ask any question about Fabricon patterns. For example: "What workspace structure should I use for a new CRM project?" or "How do I set up shortcut provisioning in my Gold notebook?"
+
+Claude Code will use the `fabricon-architecture` skill located in `.claude/skills/fabricon-architecture/SKILL.md` to provide answers grounded in Fabricon's conventions.
+
+> You can also reference patterns directly by saying "Fabricon 2", "Fabricon 3R", "Fabricon N", etc.
 
 ## Recognition
 

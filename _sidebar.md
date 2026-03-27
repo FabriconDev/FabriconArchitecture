@@ -8,5 +8,6 @@
   * [Fabricon 4](./Fabricon4/README.md)
   * Fabricon 5
   * [Fabricon N](./FabriconN/README.md)
+  * [Fabricon R](./FabriconR/README.md)
 * [Contributing](./CONTRIBUTING.md)
 * [Contact](./_contact.md)

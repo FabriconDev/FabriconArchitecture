@@ -25,7 +25,7 @@ We want all issues to be actionable. Questions are acceptable as long as they le
 
 ## Pull Requests
 
-Community members are encouraged to take on issues, submit changes, and improve the Architecture through [pull requests][pulls]. Feedback on pull requests is also immensely valuable—reviewing and commenting helps ensure that proposed changes align with the broader goals of the Architecture. All constructive feedback is welcome, as it helps maintain the Architecture as an open, collaborative project.
+Community members are encouraged to take on issues, submit changes, and improve the Architecture through [pull requests][pulls]. Feedback on pull requests is also immensely valuable. Reviewing and commenting helps ensure that proposed changes align with the broader goals of the Architecture. All constructive feedback is welcome, as it helps maintain the Architecture as an open, collaborative project.
 
 ## Contributing to the Architecture Process
 
@@ -38,7 +38,7 @@ An RFP is the starting point for discussing a new problem or challenge that the 
 
 **How to Submit an RFP:**  
 
-1. **Create an Issue:** In the [Issues tab][issues], open a new issue that explicitly states the problem. Define the scope clearly. Do not include your own solutions or opinions in the initial issue body—just the facts and the core problem that needs to be solved.  
+1. **Create an Issue:** In the [Issues tab][issues], open a new issue that explicitly states the problem. Define the scope clearly. Do not include your own solutions or opinions in the initial issue body. Focus on the facts and the core problem that needs to be solved.  
 2. **No Initial Solutions:** Keep the initial issue statement solution-free. Your goal is to set the stage for discussion. If you have solutions in mind, you can propose them in comments on the same issue after it is created.  
 3. **Core Contributor Assignment:** Once your RFP is created, a core contributor will be assigned to help guide the discussion. The core contributor ensures that all necessary details are captured and that the conversation remains constructive and solution-focused.  
 4. **Community Discussion:** Other contributors and community members can respond to the RFP issue with their own ideas and proposals. This collaborative discussion should refine the problem statement and move towards consensus on a potential solution.
@@ -55,7 +55,7 @@ An RFC is used to propose a well-defined solution or standard to be integrated i
 3. **Open a Pull Request:** Once your RFC is drafted, open a pull request to the Architecture’s RFCs directory. The community will be invited to review, comment, and suggest improvements.  
 4. **Core Contributor Review & Discussion:** A core contributor will be assigned to your RFC. This person will help incorporate feedback, ensure all questions are addressed, and guide the proposal through the review process.  
 5. **Comment Period & Approval:** Once the solution has been refined, we will announce a comment period. Community members have a set timeframe to review and provide feedback. Silence from the community during the defined timeframe will be considered approval. If all comments are addressed and the community reaches consensus, the RFC will be marked as approved.  
-6. **Integration:** After approval, the RFC’s solution will be integrated into the Architecture. Issues may be created to reflect the next steps—documentation updates, implementation guidelines, or any other necessary follow-up.
+6. **Integration:** After approval, the RFC’s solution will be integrated into the Architecture. Issues may be created to reflect the next steps, such as documentation updates, implementation guidelines, or any other necessary follow-up.
 
 ---
 
