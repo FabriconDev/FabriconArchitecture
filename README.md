@@ -1,4 +1,4 @@
-# #FabriconDev: Official Home of Fabricon Architecture
+# Fabricon: Architecture for Microsoft Fabric
 
 ## What is Fabricon?
 
