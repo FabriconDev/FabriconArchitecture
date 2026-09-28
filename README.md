@@ -67,6 +67,7 @@ Core Contributors:
 
 - Michael Cavanaugh [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/michael-cavanaugh-3920337a)
 - Bill McGough [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/williamamcgough)
+- Mahdi Zaraket [![LinkedIn](./Images/linkedin.png)](https://www.linkedin.com/in/mahdi07)
 - [YOUR NAME HERE]
 
 Contributors:

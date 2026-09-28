@@ -81,7 +81,7 @@ For the CRM example, Fabricon suggests the following branching strategy:
 - Use a pull request to merge the feature branch into the `develop` branch. This promotes code to the `CRM-Dev` workspace.
 - Use a pull request to merge the `develop` branch into the `main` branch. This promotes code to the `CRM-Prod` workspace.
 
-> When using [Fabricon 5](../Fabricon5/README.md), the `CRM-Prod` workspace is not linked to a branch. Code reaches production through the promotion pipeline rather than a `develop` to `main` merge, which leaves the pipeline as the only way in.
+> When using [Fabricon 5](../Fabricon5/README.md), the `CRM-Prod` workspace is not linked to a branch. Production is treated as read-only, with the promotion pipeline as its only writer, and code reaches it through that pipeline rather than a `develop` to `main` merge. Removing every other way in is what protects the production environment.
 
 ![Fabric - Branch out to new workspace](../Images/git-branch-to-new-workspace.png)
 

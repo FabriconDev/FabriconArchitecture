@@ -1,6 +1,6 @@
 ---
 name: fabricon-architecture
-description: Use when working on Microsoft Fabric projects that follow Fabricon patterns, making workspace or environment decisions, organizing notebooks or pipelines, setting up medallion architecture, planning deployment or source control strategy, writing pipeline step code, choosing between lakehouse and warehouse, promoting Power BI reports across environments, or managing lakehouse shortcuts. Also use when someone references a Fabricon pattern number (1-4, N, R).
+description: Use when working on Microsoft Fabric projects that follow Fabricon patterns, making workspace or environment decisions, organizing notebooks or pipelines, setting up medallion architecture, planning deployment or source control strategy, writing pipeline step code, choosing between lakehouse and warehouse, promoting Power BI reports across environments, or managing lakehouse shortcuts. Also use when someone references a Fabricon pattern number (1-5, N, R).
 ---
 
 # Fabricon Architecture
@@ -53,7 +53,7 @@ Created by the engineering team at Unite Digital LLC.
 | Pipeline orchestration? | Tiered: Main → Bronze → Silver → Gold |
 | Shared utilities? | Python wheel packages, not custom Spark envs |
 | Incremental loads? | Max-date tracking + Delta MERGE upsert |
-| Deployment? | Post-deployment notebook for lakehouse rebinding |
+| Deployment? | Automated promotion pipeline: gate, sync, deploy, bind, verify, refresh (F5). Manually, the post-deployment DevOps notebook handles the rebinding |
 | Environment config? | Single Variable Library with workspace-named valuesets, activated at runtime via `set_active_valueset()` |
 | Reporting on mirrors? | Intermediary lakehouse with shortcuts (F4) |
 | Report promotion? | Reports in Data workspaces (not Git), promote via Deployment Pipeline (FR) |
@@ -101,6 +101,8 @@ This enables multi-layer access within the one-lakehouse-per-session constraint.
 - Feature branches via "Branch out to new workspace"
 - PR flow: feature → develop → main
 
+> With Fabricon 5, `CRM-Prod` is not linked to a branch. It is read-only, written only by the promotion pipeline.
+
 ### Folder Structure
 
 - **Archive**: items pending deletion
@@ -121,7 +123,7 @@ Separates code and data into different workspaces to avoid duplicating large dat
 
 - `CRM-Shared` (shared bronze lakehouse with large data)
 - `CRM-Dev` (code: notebooks, pipelines; linked to `develop` branch)
-- `CRM-Prod` (code; linked to `main` branch)
+- `CRM-Prod` (code; linked to `main` branch, or read-only with no Git connection under Fabricon 5)
 - `CRM-Data-Dev` (data lakehouses: Bronze, Silver, Gold)
 - `CRM-Data-Prod` (data lakehouses)
 
@@ -143,6 +145,39 @@ For transformations on mirrored data:
 - **SQL Views**: simple but slower (falls back to DirectQuery)
 - **Traditional ETL**: when view performance is unacceptable
 
+## Fabricon 5: Automated Deployment and Promotion
+
+Automates the promotion steps that Fabricon 2, N and R describe manually, so that a release does not depend on someone remembering to run them.
+
+### Workspace Roles
+
+- Feature workspaces: one per ticket, created by "Branch out to new workspace", deleted when the branch is merged
+- `CRM-Dev`: tracks `develop`, developers hold Viewer rather than Contributor
+- `CRM-Prod`: no Git connection, read-only, written only by the promotion pipeline
+
+> Production is protected structurally. If the pipeline is the only writer, direct edits are impossible rather than discouraged.
+
+### The Seven Steps
+
+An Azure DevOps pipeline or GitHub Actions workflow runs on merges to `develop`. Every step raises on failure.
+
+1. **Gate**: read `git/status` on Dev, refuse to promote if any item has uncommitted changes
+2. **Sync**: `updateFromGit` so Dev matches the branch. Needs `allowOverrideItems`, which is only safe because the gate ran first
+3. **Deploy**: deployment pipeline Dev to Prod, overwriting paired items in place so their IDs stay stable
+4. **Bind**: repoint what the deploy cannot, meaning cross-workspace notebook lakehouse attachments and Direct Lake model connections, matching by name
+5. **Verify**: read every Prod item back and fail the release if any definition still references a Dev workspace, item or SQL endpoint
+6. **Refresh**: refresh deployed semantic models, since deployment does not and reports error until it happens
+7. **Clean up**: delete feature workspaces whose branch is merged and gone, guarded by naming prefix and branch existence
+
+Reference implementation in `Fabricon5/promote.py`, with `ado-pipeline.yml` and `github-pipeline.yml`.
+
+### Reference Correctness
+
+- Same-pipeline references autobind: report to semantic model, pipeline to notebook, same-pipeline lakehouses, shortcut targets
+- Cross-workspace lakehouse attachments and Direct Lake connections need the bind step
+- Deployment rules are the manual fallback, not the mechanism: they are per item, owner-only, invisible to Git, and lost if a workspace is unassigned
+- Run the pipeline as a service principal, never a personal account
+
 ## Fabricon R: Report Promotion Across Environments
 
 Extension that applies to Fabricon 2, 3, and 4, covering any pattern needing Power BI report/semantic model promotion.
@@ -160,7 +195,7 @@ Power BI reports and semantic models use logical IDs that are workspace-specific
 | Workspace | Contents | Source Control | Promotion |
 |-----------|----------|---------------|-----------|
 | `CRM-Dev` | Notebooks, pipelines, DevOps notebook | Git (`develop`) | PR merge → `CRM-Prod` |
-| `CRM-Prod` | Notebooks, pipelines, DevOps notebook | Git (`main`) | N/A |
+| `CRM-Prod` | Notebooks, pipelines, DevOps notebook | Git (`main`), or none under F5 | N/A, or promotion pipeline under F5 |
 | `CRM-Data-Dev` | Lakehouses, semantic models, reports | None | Deployment Pipeline → |
 | `CRM-Data-Prod` | Lakehouses, semantic models, reports | None | ← Target |
 
@@ -168,7 +203,7 @@ Power BI reports and semantic models use logical IDs that are workspace-specific
 
 ### Promotion Flow
 
-1. **Code promotion (Git):** `develop` → PR → `main`. Notebooks and pipelines sync to `CRM-Prod`.
+1. **Code promotion (Git):** `develop` → PR → `main`. Notebooks and pipelines sync to `CRM-Prod`. Under Fabricon 5 this step is the promotion pipeline instead, and `CRM-Prod` has no branch.
 2. **Report/model promotion (Deployment Pipeline):** `CRM-Data-Dev` → `CRM-Data-Prod`. Reports and semantic models copied to Prod.
 3. **Post-deploy rebind (DevOps notebook in CRM-Prod):**
    - `update_direct_lake_model_lakehouse_connection()` repoints semantic model to Prod lakehouse
