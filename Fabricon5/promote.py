@@ -1,18 +1,23 @@
-"""Promote Fabric workspace content: refresh Dev from git, deploy Dev -> Prod,
-fix stage bindings, verify, refresh semantic models.
+"""Promote Fabric workspace content from a development stage to production.
 
-Phases:
-  1. gate    - refuse if the Dev workspace has uncommitted changes
-  2. update  - updateFromGit so Dev matches the branch
-  3. deploy  - deployment pipeline Dev -> Prod
-  4. bind    - re-point notebook default lakehouses at the target stage
-               (ported from the DevOps notebooks; errors fail the run here
-               instead of being printed and skipped)
-  5. verify  - assert no target item still references a source-stage id
-  6. refresh - refresh deployed semantic models so calculated/import tables hold data
+Steps: gate, sync, deploy, bind, verify, refresh, clean up. Each one raises on
+failure so a partial promotion stops the run instead of continuing quietly.
 
-Auth: FABRIC_TOKEN env var (bearer for https://api.fabric.microsoft.com).
-Semantic model refresh uses the same token against the Power BI API.
+Required environment:
+    FABRIC_TOKEN            bearer token for https://api.fabric.microsoft.com
+    DEV_WORKSPACE_ID        code workspace tracking the develop branch
+    PROD_WORKSPACE_ID       code workspace receiving the deployment
+    DEPLOYMENT_PIPELINE_ID  Fabric deployment pipeline
+    DEV_STAGE_ID            source stage of that pipeline
+    PROD_STAGE_ID           target stage
+
+Optional:
+    DEV_DATA_WORKSPACE_ID   data workspaces, under Fabricon 3 and R, where the
+    PROD_DATA_WORKSPACE_ID  lakehouses live. Defaults to the code workspaces.
+    SYNC_ONLY               set to true to update the dev workspace and stop
+    VERIFY_ACTIVE_VALUE_SETS  e.g. "Config=Workspace_<prod-guid>"
+    FEATURE_WS_PREFIX       enables feature workspace cleanup
+    ADO_* or GITHUB_*       credentials for the branch check used by cleanup
 """
 
 import base64
@@ -26,39 +31,62 @@ import urllib.request
 FABRIC = "https://api.fabric.microsoft.com/v1"
 POWERBI = "https://api.powerbi.com/v1.0/myorg"
 
-# Variable libraries whose active value set the verify phase should assert,
-# e.g. VERIFY_ACTIVE_VALUE_SETS="Config=Prod" (comma-separated for several).
-EXPECTED_ACTIVE_VALUE_SET = dict(
-    pair.split("=", 1)
-    for pair in os.environ.get("VERIFY_ACTIVE_VALUE_SETS", "").split(",")
-    if "=" in pair
-)
+RETRY_STATUSES = {429, 500, 502, 503, 504}
+MAX_ATTEMPTS = 5
+OPERATION_TIMEOUT = 30 * 60
+REFRESH_TIMEOUT = 60 * 60
+REFRESH_DONE = {"Completed", "Failed", "Disabled", "Cancelled"}
 
 
 def call(method, url, body=None, ok=(200, 201, 202)):
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(body).encode() if body is not None else None,
-        method=method,
-        headers={
-            "Authorization": "Bearer " + os.environ["FABRIC_TOKEN"],
-            "Content-Type": "application/json",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req) as resp:
-            raw = resp.read()
-            if resp.status not in ok:
-                raise SystemExit(f"{method} {url}: unexpected status {resp.status}")
-            return resp.status, resp.headers, json.loads(raw) if raw else None
-    except urllib.error.HTTPError as e:
-        raise SystemExit(f"{method} {url} failed: {e.code} {e.read().decode(errors='replace')}")
+    payload = json.dumps(body).encode() if body is not None else None
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            method=method,
+            headers={
+                "Authorization": "Bearer " + os.environ["FABRIC_TOKEN"],
+                "Content-Type": "application/json",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req) as resp:
+                raw = resp.read()
+                if resp.status not in ok:
+                    raise SystemExit(f"{method} {url}: unexpected status {resp.status}")
+                return resp.status, resp.headers, json.loads(raw) if raw else None
+        except urllib.error.HTTPError as e:
+            if e.code in RETRY_STATUSES and attempt < MAX_ATTEMPTS:
+                # Fabric and Power BI both send Retry-After on a throttle.
+                wait = int(e.headers.get("Retry-After") or 2 ** attempt)
+                print(f"  {e.code} from {method} {url}, retrying in {wait}s")
+                time.sleep(wait)
+                continue
+            raise SystemExit(f"{method} {url} failed: {e.code} {e.read().decode(errors='replace')}")
+        except urllib.error.URLError as e:
+            if attempt < MAX_ATTEMPTS:
+                time.sleep(2 ** attempt)
+                continue
+            raise SystemExit(f"{method} {url} failed: {e}")
+
+
+def paged(url):
+    """Fabric list endpoints return one page plus a continuation token."""
+    results = []
+    while url:
+        _, _, body = call("GET", url)
+        results.extend(body.get("value", []))
+        token = body.get("continuationToken")
+        url = f"{url.split('?')[0]}?continuationToken={urllib.parse.quote(token)}" if token else None
+    return results
 
 
 def wait_for_operation(headers, description):
     op_id = headers.get("x-ms-operation-id")
     if not op_id:
         return None
+    deadline = time.time() + OPERATION_TIMEOUT
     while True:
         _, _, op = call("GET", f"{FABRIC}/operations/{op_id}")
         state = op.get("status")
@@ -67,7 +95,13 @@ def wait_for_operation(headers, description):
             return op_id
         if state in ("Failed", "Cancelled"):
             raise SystemExit(f"{description}: {state}: {op.get('error')}")
+        if time.time() > deadline:
+            raise SystemExit(f"{description}: still {state} after {OPERATION_TIMEOUT}s, giving up")
         time.sleep(10)
+
+
+def list_items(workspace):
+    return paged(f"{FABRIC}/workspaces/{workspace}/items")
 
 
 def get_definition(workspace, item, fmt=None):
@@ -90,11 +124,6 @@ def update_definition(workspace, item, definition):
     wait_for_operation(headers, "updateDefinition")
 
 
-def list_items(workspace):
-    _, _, body = call("GET", f"{FABRIC}/workspaces/{workspace}/items")
-    return body["value"]
-
-
 def gate_and_update(workspace):
     _, _, status = call("GET", f"{FABRIC}/workspaces/{workspace}/git/status")
     dirty = sorted(
@@ -107,24 +136,26 @@ def gate_and_update(workspace):
             "Dev workspace has uncommitted changes, refusing to promote: " + ", ".join(dirty)
         )
     head, remote = status.get("workspaceHead"), status.get("remoteCommitHash")
-    if head != remote:
-        print(f"updating Dev workspace from git: {head} -> {remote}")
-        _, headers, _ = call(
-            "POST",
-            f"{FABRIC}/workspaces/{workspace}/git/updateFromGit",
-            {
-                "workspaceHead": head,
-                "remoteCommitHash": remote,
-                "conflictResolution": {
-                    "conflictResolutionType": "Workspace",
-                    "conflictResolutionPolicy": "PreferRemote",
-                },
-                "options": {"allowOverrideItems": True},
-            },
-        )
-        wait_for_operation(headers, "updateFromGit")
-    else:
+    if head == remote:
         print("Dev workspace already matches the remote head")
+        return remote
+    print(f"updating Dev workspace from git: {head} -> {remote}")
+    _, headers, _ = call(
+        "POST",
+        f"{FABRIC}/workspaces/{workspace}/git/updateFromGit",
+        {
+            "workspaceHead": head,
+            "remoteCommitHash": remote,
+            "conflictResolution": {
+                "conflictResolutionType": "Workspace",
+                "conflictResolutionPolicy": "PreferRemote",
+            },
+            # Safe only because the gate above proved there is nothing
+            # uncommitted in the workspace to lose.
+            "options": {"allowOverrideItems": True},
+        },
+    )
+    wait_for_operation(headers, "updateFromGit")
     return remote
 
 
@@ -137,11 +168,25 @@ def deploy(pipeline, source_stage, target_stage, note):
     wait_for_operation(headers, "deploy")
 
 
-def bind_notebook_lakehouses(target_workspace, items):
-    """Point each notebook's default lakehouse at the same-named lakehouse in the
-    target workspace. Ported from the DevOps notebooks; a failure here fails the
-    promotion instead of leaving a half-bound stage."""
-    lakehouses = {i["displayName"]: i["id"] for i in items if i["type"] == "Lakehouse"}
+def lakehouses_in(workspace):
+    return {i["displayName"]: i["id"] for i in list_items(workspace) if i["type"] == "Lakehouse"}
+
+
+def authored_semantic_models(items):
+    """Every lakehouse and warehouse gets a default semantic model of the same
+    name. Those are not ours to bind or refresh, and asking for their definition
+    fails, so keep only the models somebody actually authored."""
+    generated = {i["displayName"] for i in items if i["type"] in ("Lakehouse", "Warehouse")}
+    return [i for i in items if i["type"] == "SemanticModel" and i["displayName"] not in generated]
+
+
+def bind_notebook_lakehouses(target_workspace, data_workspace, items):
+    """Point each notebook at the lakehouse of the same name in the target stage.
+
+    Under Fabricon 3 and R the lakehouses live in a separate data workspace, so
+    that is where the names are resolved and what the rewritten ids point at.
+    """
+    available = lakehouses_in(data_workspace)
     for nb in (i for i in items if i["type"] == "Notebook"):
         definition = get_definition(target_workspace, nb["id"], fmt="ipynb")
         part = next(p for p in definition["parts"] if p["path"].endswith(".ipynb"))
@@ -150,37 +195,48 @@ def bind_notebook_lakehouses(target_workspace, items):
         if not dep or not dep.get("default_lakehouse_name"):
             print(f"bind: {nb['displayName']}: no default lakehouse declared, skipping")
             continue
+
         name = dep["default_lakehouse_name"]
-        if name not in lakehouses:
+        if name not in available:
             raise SystemExit(
-                f"bind: {nb['displayName']} declares default lakehouse '{name}' "
-                f"which does not exist in the target workspace"
+                f"bind: {nb['displayName']} wants lakehouse '{name}', which does not exist "
+                f"in workspace {data_workspace}"
             )
-        if (
-            dep.get("default_lakehouse") == lakehouses[name]
-            and dep.get("default_lakehouse_workspace_id") == target_workspace
-        ):
-            print(f"bind: {nb['displayName']}: already bound to target '{name}'")
+        target_id = available[name]
+
+        already_bound = (
+            dep.get("default_lakehouse") == target_id
+            and dep.get("default_lakehouse_workspace_id") == data_workspace
+            and [k.get("id") for k in dep.get("known_lakehouses", [])] == [target_id]
+        )
+        if already_bound:
+            print(f"bind: {nb['displayName']}: already bound to '{name}'")
             continue
-        dep["default_lakehouse"] = lakehouses[name]
-        dep["default_lakehouse_workspace_id"] = target_workspace
+
+        dep["default_lakehouse"] = target_id
+        dep["default_lakehouse_workspace_id"] = data_workspace
+        # known_lakehouses is what the session mounts. Leaving it behind means a
+        # Prod notebook can still reach the Dev lakehouse.
+        if "known_lakehouses" in dep:
+            dep["known_lakehouses"] = [{"id": target_id}]
         part["payload"] = base64.b64encode(json.dumps(content).encode()).decode()
         update_definition(target_workspace, nb["id"], definition)
-        print(f"bind: {nb['displayName']}: default lakehouse -> '{name}' in target workspace")
+        print(f"bind: {nb['displayName']}: lakehouse -> '{name}' in workspace {data_workspace}")
 
 
-def endpoint_map(source_workspace, target_workspace):
-    """Map source-stage SQL endpoint identities to target-stage ones, matching
-    lakehouses by name. Used to rebind Direct Lake semantic models."""
+def endpoint_map(source_data_workspace, target_data_workspace):
+    """Source stage SQL endpoint identities mapped to their target equivalents,
+    matched by lakehouse name."""
     def endpoints(ws):
-        out = {}
+        found = {}
         for lh in (i for i in list_items(ws) if i["type"] == "Lakehouse"):
             _, _, detail = call("GET", f"{FABRIC}/workspaces/{ws}/lakehouses/{lh['id']}")
             props = detail.get("properties", {}).get("sqlEndpointProperties") or {}
             if props.get("connectionString"):
-                out[lh["displayName"]] = (props["connectionString"], props["id"])
-        return out
-    src, tgt = endpoints(source_workspace), endpoints(target_workspace)
+                found[lh["displayName"]] = (props["connectionString"], props["id"])
+        return found
+
+    src, tgt = endpoints(source_data_workspace), endpoints(target_data_workspace)
     pairs = {}
     for name, (conn, db) in src.items():
         if name in tgt:
@@ -189,35 +245,37 @@ def endpoint_map(source_workspace, target_workspace):
     return pairs
 
 
-def bind_semantic_models(source_workspace, target_workspace, items):
-    """Direct Lake models do not autobind: rewrite any source-stage SQL endpoint
-    reference in a target model to the same-named lakehouse's endpoint in the
-    target stage."""
-    pairs = endpoint_map(source_workspace, target_workspace)
+def bind_semantic_models(target_workspace, pairs, items):
+    """Direct Lake models do not autobind, so any source stage endpoint still
+    named in a target model is rewritten here."""
     if not pairs:
         return
-    for sm in (i for i in items if i["type"] == "SemanticModel"):
+    for sm in authored_semantic_models(items):
         definition = get_definition(target_workspace, sm["id"])
         changed = 0
         for part in definition["parts"]:
             text = base64.b64decode(part["payload"]).decode("utf-8", errors="replace")
-            new = text
-            for old, replacement in pairs.items():
-                new = new.replace(old, replacement)
-            if new != text:
-                part["payload"] = base64.b64encode(new.encode()).decode()
+            rewritten = text
+            for old, new in pairs.items():
+                rewritten = rewritten.replace(old, new)
+            if rewritten != text:
+                part["payload"] = base64.b64encode(rewritten.encode()).decode()
                 changed += 1
         if changed:
             update_definition(target_workspace, sm["id"], definition)
-            print(f"bind: {sm['displayName']}: rebound to target-stage SQL endpoint")
+            print(f"bind: {sm['displayName']}: rebound to the target stage endpoint")
         else:
-            print(f"bind: {sm['displayName']}: no source-stage endpoint references")
+            print(f"bind: {sm['displayName']}: no source stage endpoint references")
 
 
-def verify(source_workspace, target_workspace, items):
-    """No target item may still reference a source-stage identity."""
-    source_ids = {i["id"] for i in list_items(source_workspace)} | {source_workspace}
+def verify(source_workspaces, target_workspace, items, source_endpoints):
+    """Nothing in the target stage may still reference the source stage."""
+    source_ids = set(source_workspaces)
+    for ws in source_workspaces:
+        source_ids.update(i["id"] for i in list_items(ws))
+    markers = source_ids | set(source_endpoints)
     failures = []
+
     for nb in (i for i in items if i["type"] == "Notebook"):
         definition = get_definition(target_workspace, nb["id"], fmt="ipynb")
         part = next(p for p in definition["parts"] if p["path"].endswith(".ipynb"))
@@ -225,105 +283,117 @@ def verify(source_workspace, target_workspace, items):
             json.loads(base64.b64decode(part["payload"]))
             .get("metadata", {}).get("dependencies", {}).get("lakehouse") or {}
         )
-        for key in ("default_lakehouse", "default_lakehouse_workspace_id"):
-            if dep.get(key) in source_ids:
-                failures.append(f"{nb['displayName']}: {key} references the source stage")
-    for pl in (i for i in items if i["type"] == "DataPipeline"):
-        definition = get_definition(target_workspace, pl["id"])
-        for part in definition["parts"]:
+        referenced = [dep.get("default_lakehouse"), dep.get("default_lakehouse_workspace_id")]
+        referenced += [k.get("id") for k in dep.get("known_lakehouses", [])]
+        if any(r in source_ids for r in referenced if r):
+            failures.append(f"{nb['displayName']}: still attached to a source stage lakehouse")
+
+    for item in (i for i in items if i["type"] in ("DataPipeline", "Report")):
+        for part in get_definition(target_workspace, item["id"])["parts"]:
             text = base64.b64decode(part["payload"]).decode(errors="replace")
-            for sid in source_ids:
-                if sid in text:
-                    failures.append(f"{pl['displayName']}: {part['path']} references {sid}")
-    for rp in (i for i in items if i["type"] == "Report"):
-        definition = get_definition(target_workspace, rp["id"])
-        for part in definition["parts"]:
-            if part["path"] == "definition.pbir":
-                text = base64.b64decode(part["payload"]).decode(errors="replace")
-                for sid in source_ids:
-                    if sid in text:
-                        failures.append(f"{rp['displayName']}: bound to a source-stage model")
-    source_endpoints = set(endpoint_map(source_workspace, target_workspace).keys())
-    for sm in (i for i in items if i["type"] == "SemanticModel"):
-        definition = get_definition(target_workspace, sm["id"])
-        for part in definition["parts"]:
+            for marker in source_ids:
+                if marker in text:
+                    failures.append(f"{item['displayName']}: {part['path']} references {marker}")
+
+    for sm in authored_semantic_models(items):
+        for part in get_definition(target_workspace, sm["id"])["parts"]:
             text = base64.b64decode(part["payload"]).decode(errors="replace")
-            for marker in source_ids | source_endpoints:
+            for marker in markers:
                 if marker in text:
                     failures.append(f"{sm['displayName']}: {part['path']} references the source stage")
+
+    expected = dict(
+        pair.split("=", 1)
+        for pair in os.environ.get("VERIFY_ACTIVE_VALUE_SETS", "").split(",")
+        if "=" in pair
+    )
     for vl in (i for i in items if i["type"] == "VariableLibrary"):
-        expected = EXPECTED_ACTIVE_VALUE_SET.get(vl["displayName"])
-        if expected:
-            _, _, detail = call(
-                "GET", f"{FABRIC}/workspaces/{target_workspace}/VariableLibraries/{vl['id']}"
-            )
-            active = detail.get("properties", {}).get("activeValueSetName")
-            if active != expected:
-                failures.append(
-                    f"{vl['displayName']}: active value set is '{active}', expected '{expected}'"
-                )
+        want = expected.get(vl["displayName"])
+        if not want:
+            continue
+        _, _, detail = call(
+            "GET", f"{FABRIC}/workspaces/{target_workspace}/VariableLibraries/{vl['id']}"
+        )
+        active = detail.get("properties", {}).get("activeValueSetName")
+        if active != want:
+            failures.append(f"{vl['displayName']}: active value set is '{active}', expected '{want}'")
+
     if failures:
         raise SystemExit("verification failed:\n  " + "\n  ".join(failures))
-    print(f"verify: {len(items)} target items checked, no source-stage references")
+    print(f"verify: {len(items)} target items checked, no source stage references")
 
 
 def refresh_semantic_models(target_workspace, items):
-    for sm in (i for i in items if i["type"] == "SemanticModel"):
+    models = authored_semantic_models(items)
+    started = {}
+    for sm in models:
+        # Remember the newest refresh before triggering, otherwise polling can
+        # pick up a previous run and report it as this one.
+        _, _, before = call(
+            "GET", f"{POWERBI}/groups/{target_workspace}/datasets/{sm['id']}/refreshes?$top=1"
+        )
+        previous = before["value"][0].get("requestId") if before.get("value") else None
         call(
             "POST",
             f"{POWERBI}/groups/{target_workspace}/datasets/{sm['id']}/refreshes",
             {"type": "full", "commitMode": "transactional"},
         )
+        started[sm["id"]] = previous
         print(f"refresh: {sm['displayName']}: triggered")
-    for sm in (i for i in items if i["type"] == "SemanticModel"):
+
+    deadline = time.time() + REFRESH_TIMEOUT
+    for sm in models:
         while True:
             _, _, body = call(
                 "GET", f"{POWERBI}/groups/{target_workspace}/datasets/{sm['id']}/refreshes?$top=1"
             )
-            status = body["value"][0]["status"] if body.get("value") else "Unknown"
-            if status == "Completed":
+            latest = body["value"][0] if body.get("value") else {}
+            is_ours = latest.get("requestId") != started[sm["id"]]
+            status = latest.get("status")
+            if is_ours and status in REFRESH_DONE:
+                if status != "Completed":
+                    raise SystemExit(f"refresh: {sm['displayName']}: {status}")
                 print(f"refresh: {sm['displayName']}: completed")
                 break
-            if status == "Failed":
-                raise SystemExit(f"refresh: {sm['displayName']}: failed")
+            if time.time() > deadline:
+                raise SystemExit(f"refresh: {sm['displayName']}: timed out waiting for completion")
             time.sleep(10)
 
 
-def git_provider_branch_check():
-    """Return a function that answers "does this branch still exist", for
-    whichever git provider is configured, or None if neither is.
+def git_provider():
+    """The configured repository, and a way to ask whether a branch still exists.
 
-    Azure DevOps needs ADO_TOKEN, ADO_ORG_URL, ADO_PROJECT and ADO_REPO.
-    GitHub needs GITHUB_TOKEN and GITHUB_REPOSITORY (owner/repo), both of
-    which Actions provides by default.
+    Azure DevOps needs ADO_TOKEN, ADO_ORG_URL, ADO_PROJECT and ADO_REPO. GitHub
+    needs GITHUB_TOKEN and GITHUB_REPOSITORY, both of which Actions provides.
     """
     ado_token = os.environ.get("ADO_TOKEN")
     gh_token = os.environ.get("GITHUB_TOKEN")
 
     if ado_token and os.environ.get("ADO_ORG_URL"):
-        org = os.environ["ADO_ORG_URL"].rstrip("/")
+        org_url = os.environ["ADO_ORG_URL"].rstrip("/")
+        org = org_url.rstrip("/").split("/")[-1]
         project = os.environ["ADO_PROJECT"]
         repo = os.environ["ADO_REPO"]
 
-        def ado_branch_exists(name):
+        def exists(branch):
             req = urllib.request.Request(
-                f"{org}/{project}/_apis/git/repositories/{repo}/refs"
-                f"?filter=heads/{urllib.parse.quote(name)}&api-version=7.1",
+                f"{org_url}/{project}/_apis/git/repositories/{repo}/refs"
+                f"?filter=heads/{urllib.parse.quote(branch)}&api-version=7.1",
                 headers={"Authorization": "Bearer " + ado_token},
             )
             with urllib.request.urlopen(req) as resp:
                 refs = json.loads(resp.read()).get("value", [])
-            return any(r.get("name") == f"refs/heads/{name}" for r in refs)
+            return any(r.get("name") == f"refs/heads/{branch}" for r in refs)
 
-        return ado_branch_exists
+        return {"organizationName": org, "projectName": project, "repositoryName": repo}, exists
 
     if gh_token and os.environ.get("GITHUB_REPOSITORY"):
-        repository = os.environ["GITHUB_REPOSITORY"]
+        owner, repo = os.environ["GITHUB_REPOSITORY"].split("/", 1)
 
-        def github_branch_exists(name):
+        def exists(branch):
             req = urllib.request.Request(
-                f"https://api.github.com/repos/{repository}/git/ref/"
-                f"heads/{urllib.parse.quote(name)}",
+                f"https://api.github.com/repos/{owner}/{repo}/git/ref/"
+                f"heads/{urllib.parse.quote(branch)}",
                 headers={
                     "Authorization": "Bearer " + gh_token,
                     "Accept": "application/vnd.github+json",
@@ -337,60 +407,88 @@ def git_provider_branch_check():
                     return False
                 raise
 
-        return github_branch_exists
+        return {"organizationName": owner, "repositoryName": repo}, exists
 
-    return None
+    return None, None
 
 
 def cleanup_feature_workspaces():
-    """Delete branched-out feature workspaces whose git branch is gone (merged
-    and deleted). Guardrails: only workspaces whose name starts with
-    FEATURE_WS_PREFIX, and only when the connected branch no longer exists in
-    the repo. A workspace with a live branch is active work and is left alone."""
+    """Delete feature workspaces whose branch has been merged and removed.
+
+    Three things have to be true before anything is deleted: the name matches
+    the agreed prefix, the workspace is connected to the same repository this
+    pipeline promotes from, and it holds no uncommitted work.
+    """
     prefix = os.environ.get("FEATURE_WS_PREFIX")
     if not prefix:
         print("cleanup: FEATURE_WS_PREFIX not set, skipping")
         return
 
-    branch_exists = git_provider_branch_check()
-    if branch_exists is None:
+    repo, branch_exists = git_provider()
+    if not repo:
         print("cleanup: no git provider credentials set, skipping")
         return
 
-    _, _, body = call("GET", f"{FABRIC}/workspaces")
-    for ws in body["value"]:
-        if not ws["displayName"].startswith(prefix):
+    for ws in paged(f"{FABRIC}/workspaces"):
+        name = ws["displayName"]
+        if not name.startswith(prefix):
             continue
         try:
             _, _, conn = call("GET", f"{FABRIC}/workspaces/{ws['id']}/git/connection")
         except SystemExit:
-            print(f"cleanup: {ws['displayName']}: no readable git connection, leaving alone")
+            print(f"cleanup: {name}: git connection not readable, leaving alone")
             continue
+
         details = conn.get("gitProviderDetails") or {}
         branch = details.get("branchName")
         if not branch:
-            print(f"cleanup: {ws['displayName']}: not git-connected, leaving alone")
+            print(f"cleanup: {name}: not git connected, leaving alone")
             continue
+
+        mismatched = [
+            key for key, value in repo.items()
+            if (details.get(key) or "").lower() != value.lower()
+        ]
+        if mismatched:
+            print(f"cleanup: {name}: belongs to a different repository, leaving alone")
+            continue
+
         if branch_exists(branch):
-            print(f"cleanup: {ws['displayName']}: branch '{branch}' still exists, active work")
+            print(f"cleanup: {name}: branch '{branch}' still exists, active work")
             continue
+
+        _, _, status = call("GET", f"{FABRIC}/workspaces/{ws['id']}/git/status")
+        if any(c.get("workspaceChange") for c in status.get("changes", [])):
+            print(f"cleanup: {name}: has uncommitted changes, leaving alone")
+            continue
+
         call("DELETE", f"{FABRIC}/workspaces/{ws['id']}", ok=(200, 204))
-        print(f"cleanup: {ws['displayName']}: branch '{branch}' is gone, workspace deleted")
+        print(f"cleanup: {name}: branch '{branch}' is gone, workspace deleted")
 
 
 def main():
     dev = os.environ["DEV_WORKSPACE_ID"]
     prod = os.environ["PROD_WORKSPACE_ID"]
-    pipeline = os.environ["DEPLOYMENT_PIPELINE_ID"]
-    source_stage = os.environ["DEV_STAGE_ID"]
-    target_stage = os.environ["PROD_STAGE_ID"]
+    dev_data = os.environ.get("DEV_DATA_WORKSPACE_ID", dev)
+    prod_data = os.environ.get("PROD_DATA_WORKSPACE_ID", prod)
 
     remote = gate_and_update(dev)
-    deploy(pipeline, source_stage, target_stage, f"Automated deploy of {remote[:8]}")
+    if os.environ.get("SYNC_ONLY", "").lower() in ("1", "true", "yes"):
+        print("SYNC_ONLY is set, stopping before deployment")
+        return
+
+    deploy(
+        os.environ["DEPLOYMENT_PIPELINE_ID"],
+        os.environ["DEV_STAGE_ID"],
+        os.environ["PROD_STAGE_ID"],
+        f"Automated deploy of {remote[:8]}",
+    )
+
     items = list_items(prod)
-    bind_notebook_lakehouses(prod, items)
-    bind_semantic_models(dev, prod, items)
-    verify(dev, prod, items)
+    pairs = endpoint_map(dev_data, prod_data)
+    bind_notebook_lakehouses(prod, prod_data, items)
+    bind_semantic_models(prod, pairs, items)
+    verify({dev, dev_data}, prod, items, pairs.keys())
     refresh_semantic_models(prod, items)
     cleanup_feature_workspaces()
     print("promotion complete")

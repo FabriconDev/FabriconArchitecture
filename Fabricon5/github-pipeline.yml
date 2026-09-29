@@ -36,6 +36,11 @@ jobs:
           DEPLOYMENT_PIPELINE_ID: <deployment-pipeline-guid>
           DEV_STAGE_ID: <dev-stage-guid>
           PROD_STAGE_ID: <prod-stage-guid>
-          VERIFY_ACTIVE_VALUE_SETS: 'Config=Prod'
+          # Under Fabricon 3 and R the lakehouses live in separate data
+          # workspaces. Leave these out when code and data share a workspace.
+          DEV_DATA_WORKSPACE_ID: <dev-data-workspace-guid>
+          PROD_DATA_WORKSPACE_ID: <prod-data-workspace-guid>
+          # Fabricon N names value sets after the workspace they belong to.
+          VERIFY_ACTIVE_VALUE_SETS: 'Config=Workspace_<prod-workspace-guid>'
           FEATURE_WS_PREFIX: 'CRM-Feature-'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

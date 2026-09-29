@@ -22,6 +22,10 @@ variables:
   deploymentPipelineId: '<deployment-pipeline-guid>'
   devStageId: '<dev-stage-guid>'
   prodStageId: '<prod-stage-guid>'
+  # Under Fabricon 3 and R the lakehouses live in separate data workspaces.
+  # Leave these out when code and data share a workspace.
+  devDataWorkspaceId: '<dev-data-workspace-guid>'
+  prodDataWorkspaceId: '<prod-data-workspace-guid>'
 
 steps:
   - checkout: self
@@ -35,7 +39,10 @@ steps:
       DEPLOYMENT_PIPELINE_ID: $(deploymentPipelineId)
       DEV_STAGE_ID: $(devStageId)
       PROD_STAGE_ID: $(prodStageId)
-      VERIFY_ACTIVE_VALUE_SETS: 'Config=Prod'   # variable library assertions
+      DEV_DATA_WORKSPACE_ID: $(devDataWorkspaceId)
+      PROD_DATA_WORKSPACE_ID: $(prodDataWorkspaceId)
+      # Fabricon N names value sets after the workspace they belong to.
+      VERIFY_ACTIVE_VALUE_SETS: 'Config=Workspace_$(prodWorkspaceId)'
       FEATURE_WS_PREFIX: 'CRM-Feature-'         # cleanup only touches this prefix
       ADO_TOKEN: $(System.AccessToken)          # used only to check branch existence
       ADO_ORG_URL: 'https://dev.azure.com/<organization>'

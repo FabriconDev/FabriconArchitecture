@@ -42,6 +42,8 @@ An Azure DevOps pipeline or a GitHub Actions workflow runs on merges to `develop
 
 A reference implementation is included in this folder as [`promote.py`](./promote.py), written against the standard library and configured entirely through environment variables, alongside pipeline definitions for [Azure DevOps](./ado-pipeline.yml) and [GitHub Actions](./github-pipeline.yml). Bringing another domain onto the pattern is a copy of the pipeline definition with different IDs.
 
+Under Fabricon 3 and R the lakehouses sit in their own data workspaces, so the promotion needs to know about those as well as the code workspaces. Set `DEV_DATA_WORKSPACE_ID` and `PROD_DATA_WORKSPACE_ID` in that case, and leave them out when code and data share a workspace.
+
 > Fabricon recommends running the promotion as a service principal rather than as a person, so that releases are attributed to the process and do not depend on an individual's account. This requires the *Service principals can use Fabric APIs* tenant setting, with the principal added as an Admin on both workspaces and on the deployment pipeline.
 
 ## 3. Keeping references correct
@@ -75,7 +77,7 @@ if config is None:                          # unknown workspace = branched-out f
 
 A common worry when several people are working at once is that their changes will collide during deployment, but they never meet there, because changes converge in git through pull requests and two people who have edited the same notebook find out at review time, in a readable text diff, rather than at release time. By the time `develop` moves it is a single history, and the pipeline treats a batch of forty merges exactly as it treats one.
 
-That leaves the question of cadence. Promoting on every merge keeps batches small, so that when something does break the change responsible is a single pull request, whereas a release train lets merges keep the development workspace current and promotes to production on a schedule or behind an [environment approval](https://learn.microsoft.com/en-us/azure/devops/pipelines/process/approvals). Both work with the same pipeline, since the sync and promote halves can be triggered independently.
+That leaves the question of cadence. Promoting on every merge keeps batches small, so that when something does break the change responsible is a single pull request, whereas a release train lets merges keep the development workspace current and promotes to production on a schedule or behind an [environment approval](https://learn.microsoft.com/en-us/azure/devops/pipelines/process/approvals). Both work with the same pipeline. Setting `SYNC_ONLY` stops the run after the development workspace has been brought up to date, so a merge-triggered run can keep development current while a separate scheduled or approved run carries out the promotion.
 
 > Fabricon recommends enabling *delete source branch on merge* in the repository, because together with the cleanup step it allows feature workspaces to retire themselves.
 
