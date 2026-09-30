@@ -453,6 +453,8 @@ os.environ["DATA_ENVIRONMENT"] = dataEnvironment
 
 > [Fabricon 3](../Fabricon3/README.md) explains the reason for having code and data in separate workspaces.
 
+> [Fabricon 5](../Fabricon5/README.md) recommends holding these workspace identifiers in a [variable library](https://learn.microsoft.com/en-us/fabric/cicd/variable-library/variable-library-overview) rather than in the notebook, so that they become configuration that is versioned alongside the code but resolved per workspace. The fallback to DEV shown above is still required, since it is what allows a feature workspace to run without changes.
+
 Fabricon recommends having a notebook for environment variables and another notebook to run post deployment updates to point the notebooks containing code to correct lakehouse.
 
 The following code shows contents of `PostDeployment` notebook:

@@ -21,6 +21,8 @@ Building on [Fabricon 3](../Fabricon3/README.md), which already separates code a
 
 > Reports and semantic models live in Data workspaces. This eliminates logicalId conflicts because reports never touch Git.
 
+> When using [Fabricon 5](../Fabricon5/README.md), `CRM-Prod` has no Git connection and its promotion method is the promotion pipeline. The workspace is treated as read-only, with that pipeline as its only writer, which protects production from direct edits.
+
 With Fabricon R, the Reports folder moves from the Code workspace to the Data workspace:
 
 ```text
@@ -48,6 +50,8 @@ Notebooks and pipelines are promoted via Git, following the branching strategy f
 - Feature branch → PR → `develop` branch (syncs to `CRM-Dev`)
 - `develop` → PR → `main` branch (syncs to `CRM-Prod`)
 
+> When using [Fabricon 5](../Fabricon5/README.md), the second step is replaced by the promotion pipeline, and `CRM-Prod` is not linked to a branch. Production is read-only, written only by that pipeline.
+
 ## 3. Report and Semantic Model Promotion via Deployment Pipeline
 
 Reports and semantic models are promoted using a [Fabric Deployment Pipeline](https://learn.microsoft.com/en-us/fabric/cicd/deployment-pipelines/intro-to-deployment-pipelines) configured between `CRM-Data-Dev` and `CRM-Data-Prod`.
@@ -63,6 +67,8 @@ Important behaviors of deployment pipelines:
 ## 4. Post-Deployment Rebind
 
 After the deployment pipeline completes, the DevOps notebook in the Code workspace (`CRM-Prod`) must be executed to rebind items to the correct environment. The DevOps notebook performs three operations:
+
+> [Fabricon 5](../Fabricon5/README.md) runs these same rebind operations automatically as a step of the promotion, so that the result does not depend on somebody remembering to execute the notebook afterwards.
 
 **Semantic model → Prod lakehouse**: Uses [Semantic Link Labs](https://github.com/microsoft/semantic-link-labs) to update the [Direct Lake](https://learn.microsoft.com/en-us/fabric/fundamentals/direct-lake-overview) model's lakehouse connection.
 

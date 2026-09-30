@@ -1,0 +1,46 @@
+# Fabricon 5 promotion workflow for GitHub Actions (reference implementation).
+# The Azure DevOps equivalent is ado-pipeline.yml; both run the same promote.py.
+# Onboarding a domain = copy this file, set the five IDs and the prefix.
+#
+# Steps: gate -> sync -> deploy -> bind -> verify -> refresh -> cleanup.
+#
+# Authentication: prefer a federated credential and azure/login, so that no
+# secret is stored. The FABRIC_TOKEN secret shown below is a stopgap for
+# evaluation only.
+
+name: Promote to Prod
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'CRM/**'          # this domain's folder in the repo
+  workflow_dispatch:
+
+permissions:
+  contents: read          # promote.py reads refs to find merged feature branches
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Promote to Prod
+        run: python3 CRM/pipeline/promote.py
+        env:
+          FABRIC_TOKEN: ${{ secrets.FABRIC_TOKEN }}
+          DEV_WORKSPACE_ID: <dev-workspace-guid>
+          PROD_WORKSPACE_ID: <prod-workspace-guid>
+          DEPLOYMENT_PIPELINE_ID: <deployment-pipeline-guid>
+          DEV_STAGE_ID: <dev-stage-guid>
+          PROD_STAGE_ID: <prod-stage-guid>
+          # Under Fabricon 3 and R the lakehouses live in separate data
+          # workspaces. Leave these out when code and data share a workspace.
+          DEV_DATA_WORKSPACE_ID: <dev-data-workspace-guid>
+          PROD_DATA_WORKSPACE_ID: <prod-data-workspace-guid>
+          # Fabricon N names value sets after the workspace they belong to.
+          VERIFY_ACTIVE_VALUE_SETS: 'Config=Workspace_<prod-workspace-guid>'
+          FEATURE_WS_PREFIX: 'CRM-Feature-'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

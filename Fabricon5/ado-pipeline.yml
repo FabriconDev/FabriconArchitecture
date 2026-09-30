@@ -1,0 +1,50 @@
+# Fabricon 5 promotion pipeline (reference implementation).
+# Onboarding a domain = copy this file, set the five IDs and the prefix.
+#
+# Runs promote.py: gate -> sync -> deploy -> bind -> verify -> refresh -> cleanup.
+# Authenticate with a service principal via a service connection; the
+# queue-time secret variable shown here is a stopgap for evaluation only.
+
+trigger:
+  branches:
+    include:
+      - develop
+  paths:
+    include:
+      - CRM/*          # this domain's folder in the repo
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  devWorkspaceId: '<dev-workspace-guid>'
+  prodWorkspaceId: '<prod-workspace-guid>'
+  deploymentPipelineId: '<deployment-pipeline-guid>'
+  devStageId: '<dev-stage-guid>'
+  prodStageId: '<prod-stage-guid>'
+  # Under Fabricon 3 and R the lakehouses live in separate data workspaces.
+  # Leave these out when code and data share a workspace.
+  devDataWorkspaceId: '<dev-data-workspace-guid>'
+  prodDataWorkspaceId: '<prod-data-workspace-guid>'
+
+steps:
+  - checkout: self
+
+  - script: python3 CRM/pipeline/promote.py
+    displayName: Promote to Prod
+    env:
+      FABRIC_TOKEN: $(fabricToken)              # replace with service-connection auth
+      DEV_WORKSPACE_ID: $(devWorkspaceId)
+      PROD_WORKSPACE_ID: $(prodWorkspaceId)
+      DEPLOYMENT_PIPELINE_ID: $(deploymentPipelineId)
+      DEV_STAGE_ID: $(devStageId)
+      PROD_STAGE_ID: $(prodStageId)
+      DEV_DATA_WORKSPACE_ID: $(devDataWorkspaceId)
+      PROD_DATA_WORKSPACE_ID: $(prodDataWorkspaceId)
+      # Fabricon N names value sets after the workspace they belong to.
+      VERIFY_ACTIVE_VALUE_SETS: 'Config=Workspace_$(prodWorkspaceId)'
+      FEATURE_WS_PREFIX: 'CRM-Feature-'         # cleanup only touches this prefix
+      ADO_TOKEN: $(System.AccessToken)          # used only to check branch existence
+      ADO_ORG_URL: 'https://dev.azure.com/<organization>'
+      ADO_PROJECT: '<project>'
+      ADO_REPO: '<repository>'

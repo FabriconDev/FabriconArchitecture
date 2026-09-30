@@ -81,6 +81,8 @@ For the CRM example, Fabricon suggests the following branching strategy:
 - Use a pull request to merge the feature branch into the `develop` branch. This promotes code to the `CRM-Dev` workspace.
 - Use a pull request to merge the `develop` branch into the `main` branch. This promotes code to the `CRM-Prod` workspace.
 
+> When using [Fabricon 5](../Fabricon5/README.md), the `CRM-Prod` workspace is not linked to a branch. Production is treated as read-only, with the promotion pipeline as its only writer, and code reaches it through that pipeline rather than a `develop` to `main` merge. Removing every other way in is what protects the production environment.
+
 ![Fabric - Branch out to new workspace](../Images/git-branch-to-new-workspace.png)
 
 ## Folder Structure
@@ -141,7 +143,7 @@ Teams can use the [Office 365 Connector](https://learn.microsoft.com/en-us/conne
 | Lakehouse vs warehouse decision | Lakehouse recommended for flexibility, comparable performance, no upfront schema |
 | Notebooks can only connect to one lakehouse at a time | Shortcuts + named schemas (`Bronze.*`, `Silver.*`) for cross-layer access |
 | No structured data organization across medallion layers | `dbo` schema for current layer, named schemas for other layers |
-| No branching strategy for Fabric | `main` ↔ Prod, `develop` ↔ Dev, feature branches via "Branch out to new workspace" |
+| No branching strategy for Fabric | `main` ↔ Prod, `develop` ↔ Dev, feature branches via "Branch out to new workspace" (see [Fabricon 5](../Fabricon5/README.md), where production is not linked to a branch) |
 | No visibility into pipeline execution outcomes | HTML email notifications with per-step results |
 
 ## References

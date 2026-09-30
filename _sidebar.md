@@ -6,7 +6,7 @@
   * [Fabricon 2](./Fabricon2/README.md)
   * [Fabricon 3](./Fabricon3/README.md)
   * [Fabricon 4](./Fabricon4/README.md)
-  * Fabricon 5
+  * [Fabricon 5](./Fabricon5/README.md)
   * [Fabricon N](./FabriconN/README.md)
   * [Fabricon R](./FabriconR/README.md)
 * [Contributing](./CONTRIBUTING.md)

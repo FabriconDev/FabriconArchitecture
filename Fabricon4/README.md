@@ -57,8 +57,6 @@ SQL views can be created on a lakehouse table to transform data as needed, but a
 
 Implementing a traditional ETL goes against the idea of mirroring but may be the only option if the performance of SQL views is not acceptable. With this approach, new tables are created in the reporting lakehouse and included in the default Power BI semantic model.
 
-[Fabricon 5: Realtime Reporting with EventHouse](../Fabricon5/README.md) may be an alternative option.
-
 ## What Fabricon 4 Solves
 
 | Problem | Solution |
